@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.user.mapper.UserSubscriptionMapper">
+  <select id="getSubscriptions" resultType="com.hsx.manyue.modules.user.model.dto.UserDTO">
+    select user.id, user.nick, user.avatar
+    from t_user_subscription subscription
+    inner join t_user user on user.id = subscription.author_id and user.is_delete = 0
+    where subscription.is_delete = 0 and subscription.user_id = #{userId}
+    order by subscription.create_time desc
+  </select>
+
+  <select id="getSubscribedList" resultType="com.hsx.manyue.modules.user.model.dto.UserDTO">
+    SELECT user.id, user.nick, user.avatar
+    FROM t_user_subscription subscription
+           INNER JOIN t_user user ON user.id = subscription.user_id AND user.is_delete = 0  -- 改为 user_id（订阅者）
+    WHERE subscription.is_delete = 0
+      AND subscription.author_id = #{userId}  -- 查询“谁订阅了我”
+    ORDER BY subscription.create_time DESC
+  </select>
+</mapper>

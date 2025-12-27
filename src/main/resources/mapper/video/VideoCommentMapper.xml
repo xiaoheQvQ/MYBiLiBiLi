@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.video.mapper.VideoCommentMapper">
+
+
+
+    <select id="getCommentByVideoId" resultType="com.hsx.manyue.modules.video.model.dto.CommentDto" parameterType="Long">
+        SELECT
+            c.id,
+            c.video_id as videoId,
+            c.parent_id as parentId,
+            c.content,
+            c.create_time as createTime,
+            u.id as "user.id",
+            u.nick as "user.nick",
+            u.avatar as "user.avatar"
+        FROM t_video_comment c
+                 LEFT JOIN t_user u ON c.user_id = u.id
+        WHERE c.video_id = #{videoId}
+          AND c.is_delete = 0
+          AND c.parent_id = 0
+        ORDER BY c.create_time DESC
+    </select>
+
+
+
+    <select id="getCommentByParentId" resultType="com.hsx.manyue.modules.video.model.dto.CommentDto" parameterType="Long">
+        SELECT
+            c.id,
+            c.video_id as videoId,
+            c.parent_id as parentId,
+            c.content,
+            c.create_time as createTime,
+            u.id as "user.id",
+            u.nick as "user.nick",
+            u.avatar as "user.avatar"
+        FROM t_video_comment c
+                 LEFT JOIN t_user u ON c.user_id = u.id
+        WHERE c.parent_id = #{parentId}
+          AND c.is_delete = 0
+        ORDER BY c.create_time ASC
+    </select>
+    <select id="getUserNickByUserId" resultType="java.lang.String">
+        select nick from t_user where id = #{replyToUserId}
+    </select>
+    <select id="getvideoPublishUserIdByVideoId" resultType="java.lang.String">
+        select user_id from t_video where id = #{videoId}
+    </select>
+    <select id="getVideoTitleByVideoId" resultType="java.lang.String">
+        select title from t_video where id  = #{videoPublishUserId}
+    </select>
+    <select id="queryAdmin" resultType="java.lang.String">
+        select account_type from t_user where id = #{userId}
+    </select>
+
+
+</mapper>

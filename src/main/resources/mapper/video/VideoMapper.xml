@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.video.mapper.VideoMapper">
+    <insert id="insertDanMaKu">
+        INSERT INTO t_danmaku (
+            id,
+            user_id,
+            video_id,
+            `time`,
+            position,
+            color,
+            nick,
+            content,
+            create_time,
+            update_time,
+            is_delete
+        ) VALUES (
+                     #{id},
+                     #{userId},
+                     #{videoId},
+                     #{time},
+                     #{position},
+                     #{color},
+                     #{nick},
+                     #{content},
+                     NOW(),
+                     NOW(),
+                     0
+                 )
+    </insert>
+
+    <select id="getVideoDetail" resultType="com.hsx.manyue.modules.video.model.dto.VideoDTO">
+        SELECT video.id,
+               video.user_id,
+               users.nick,
+               users.avatar,
+               video.title,
+               video.description,
+               video.video_id,
+               video.cover,
+               video.count,
+               video.status,
+               video.duration,
+               video.area,
+               video.subtitle,
+               COUNT(DISTINCT collection.user_id) AS collect,
+               COUNT(DISTINCT `like`.user_id)     AS `like`,
+               `video`.create_time
+        FROM t_video video
+                 INNER JOIN t_user users
+                            ON video.user_id = users.id
+                 LEFT JOIN t_video_collection collection ON video.id = collection.video_id AND collection.is_delete = 0
+                 LEFT JOIN t_video_like `like` ON `like`.video_id = video.id AND `like`.is_delete = 0
+        WHERE video.id = #{id}
+    </select>
+    <select id="pageVideo" resultType="com.hsx.manyue.modules.video.model.dto.VideoDTO">
+        select v.id, v.user_id, v.title, u.nick, u.avatar, v.duration, v.cover, count(distinct l.user_id) as `like`,
+        count(distinct c.user_id) as `collect`, v.count
+        from t_video v
+        left join t_user u on v.user_id = u.id and u.is_delete = 0
+        left join t_video_like l on v.id = l.video_id and l.is_delete = 0
+        left join t_video_collection c on v.id = c.video_id and c.is_delete = 0
+        left join t_video_tag vt on vt.video_id = v.id
+        left join t_tag t on vt.tag_id = t.id
+        where v.is_delete = 0 and v.status = 2
+        <if test="param.area != null">
+            and area = #{param.area.code}
+        </if>
+        <if test="@cn.hutool.core.util.StrUtil@isNotBlank(param.keyword)">
+            and (
+            title like concat('%', #{param.keyword}, '%') or
+            nick like concat('%', #{param.keyword},'%') or
+            t.name like concat('%', #{param.keyword}, '%')
+            )
+        </if>
+        group by v.id
+        order by rand(#{param.seed})
+    </select>
+
+    <select id="getPreferenceData" resultType="com.hsx.manyue.modules.video.model.dto.UserPreference">
+        select user_id, video_id, sum(value) as value
+        from (
+                 select user_id, video_id, 2 value
+                 from t_video_like
+                 where is_delete = 0
+                 group by user_id, video_id
+                 union
+                 select user_id, video_id, 2.5 value
+                 from t_video_collection
+                 where is_delete = 0
+                 group by user_id, video_id
+                 union
+                 select user_id, video_id, sum(1.5)
+                 from t_video_comment
+                 where is_delete = 0
+                 group by user_id, video_id
+                 union
+                 select user_id, video_id, sum(1)
+                 from t_danmaku
+                 where is_delete = 0
+                 group by user_id, video_id
+                 union
+                 select user_id, video_id, sum(0.5)
+                 from t_video_history
+                 where is_delete = 0
+                 group by user_id, video_id
+             ) as data
+        group by user_id, video_id
+    </select>
+
+    <select id="getPreferenceCountByUserId" resultType="java.lang.Long">
+        SELECT SUM(count)
+        FROM (
+                 SELECT COUNT(user_id) COUNT
+                 FROM t_video_like
+                 WHERE is_delete = 0 AND user_id = #{userId}
+                 UNION
+                 SELECT COUNT(user_id) COUNT
+                 FROM t_video_collection
+                 WHERE is_delete = 0 AND user_id = #{userId}
+                 UNION
+                 SELECT COUNT(user_id) COUNT
+                 FROM t_video_comment
+                 WHERE is_delete = 0 AND user_id = #{userId}
+                 UNION
+                 SELECT COUNT(user_id) COUNT
+                 FROM t_danmaku
+                 WHERE is_delete = 0 AND user_id = #{userId}
+                 UNION
+                 SELECT COUNT(user_id) COUNT
+                 FROM t_video_history
+                 WHERE is_delete = 0 AND user_id = #{userId}
+             ) AS data
+    </select>
+
+    <select id="getRandomVideo" resultType="com.hsx.manyue.modules.video.model.dto.VideoDTO">
+        SELECT v.id,
+        v.user_id,
+        v.title,
+        u.nick,
+        u.avatar,
+        v.duration,
+        v.cover,
+        COUNT(l.video_id) AS `like`,
+        COUNT(c.video_id) AS `collect`,
+        v.count
+        FROM t_video                      v
+        LEFT JOIN t_user             u ON v.user_id = u.id AND u.is_delete = 0
+        LEFT JOIN t_video_like       l ON v.id = l.video_id AND l.is_delete = 0
+        LEFT JOIN t_video_collection c ON v.id = c.video_id AND c.is_delete = 0
+        <where>
+            v.is_delete = 0
+            <if test="videoIds != null and videoIds.size() != 0">
+                AND v.id in
+                <foreach collection="videoIds" separator="," open="(" close=")" item="id">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY v.id
+        ORDER BY rand() limit 7
+    </select>
+
+    <select id="getPreferenceCountByVideoId" resultType="java.lang.Long">
+        SELECT SUM(total)
+        FROM (
+                 SELECT COUNT(user_id) as total
+                 FROM t_video_like
+                 WHERE is_delete = 0 AND video_id = #{videoId}
+                 UNION
+                 SELECT COUNT(user_id) as total
+                 FROM t_video_collection
+                 WHERE is_delete = 0 AND video_id = #{videoId}
+                 UNION
+                 SELECT COUNT(user_id) as total
+                 FROM t_video_comment
+                 WHERE is_delete = 0 AND video_id = #{videoId}
+                 UNION
+                 SELECT COUNT(user_id) as total
+                 FROM t_danmaku
+                 WHERE is_delete = 0 AND video_id = #{videoId}
+                 UNION
+                 SELECT COUNT(user_id) as total
+                 FROM t_video_history
+                 WHERE is_delete = 0 AND video_id = #{videoId}
+             ) AS data
+    </select>
+
+    <select id="getRandomVideoByArea" resultType="com.hsx.manyue.modules.video.model.dto.VideoDTO">
+        SELECT v.id,
+        v.area,
+        v.user_id,
+        v.duration,
+        v.title,
+        u.nick,
+        u.avatar,
+        v.duration,
+        v.cover,
+        COUNT(l.video_id) AS `like`,
+        COUNT(c.video_id) AS `collect`,
+        v.count
+        FROM t_video                      v
+        LEFT JOIN t_user             u ON v.user_id = u.id AND u.is_delete = 0
+        LEFT JOIN t_video_like       l ON v.id = l.video_id AND l.is_delete = 0
+        LEFT JOIN t_video_collection c ON v.id = c.video_id AND c.is_delete = 0
+        <where>
+            <if test="area!= null and area!= ''">
+                v.area = #{area}
+            </if>
+        </where>
+        GROUP BY v.id
+        ORDER BY rand() limit 7
+    </select>
+    <select id="getRandomNeedVideo" resultType="com.hsx.manyue.modules.video.model.dto.VideoDTO">
+        SELECT * FROM t_video
+        WHERE status = 2
+        AND is_delete = 0
+        AND user_id != #{userId}  <!-- 排除自己发布的视频 -->
+        ORDER BY -LOG(1-RAND())/count  <!-- 按观看次数加权随机 -->
+        LIMIT #{needVideoSize}  <!-- 动态指定返回数量 -->
+    </select>
+    <resultMap id="userVideoStatsResultMap" type="com.hsx.manyue.modules.video.model.dto.UserVideoStatsDto">
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="collect_count" property="collectCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="danmaku_count" property="danmakuCount"/>
+    </resultMap>
+
+    <select id="selectUserVideoStatsLast7Days" resultMap="userVideoStatsResultMap">
+        SELECT
+            COUNT(DISTINCT vh.video_id) AS view_count,
+            COUNT(DISTINCT vl.video_id) AS like_count,
+            COUNT(DISTINCT vc.video_id) AS collect_count,
+            COUNT(DISTINCT vcom.id) AS comment_count,
+            COUNT(DISTINCT d.id) AS danmaku_count
+        FROM
+            t_user u
+                LEFT JOIN t_video_history vh ON u.id = vh.user_id
+                AND vh.is_delete = 0
+                AND vh.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                LEFT JOIN t_video_like vl ON u.id = vl.user_id
+                AND vl.is_delete = 0
+                AND vl.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                LEFT JOIN t_video_collection vc ON u.id = vc.user_id
+                AND vc.is_delete = 0
+                AND vc.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                LEFT JOIN t_video_comment vcom ON u.id = vcom.user_id
+                AND vcom.is_delete = 0
+                AND vcom.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                LEFT JOIN t_danmaku d ON u.id = d.user_id
+                AND d.is_delete = 0
+                AND d.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        WHERE
+            u.id = #{userId}
+          AND u.is_delete = 0
+    </select>
+
+    <!-- 如果需要按天分组统计，可以使用以下SQL -->
+    <select id="selectUserVideoStatsGroupByDay" resultType="com.hsx.manyue.modules.video.model.dto.UserVideoStatsDto">
+        SELECT
+            stat_date,
+            SUM(view_count) AS viewCount,
+            SUM(like_count) AS likeCount,
+            SUM(collect_count) AS collectCount,
+            SUM(comment_count) AS commentCount,
+            SUM(danmaku_count) AS danmakuCount
+        FROM (
+                 -- 历史记录
+                 SELECT DATE(create_time) AS stat_date,
+                        COUNT(DISTINCT video_id) AS view_count,
+                        0 AS like_count,
+                        0 AS collect_count,
+                        0 AS comment_count,
+                        0 AS danmaku_count
+                 FROM t_video_history
+                 WHERE user_id = #{userId} AND is_delete = 0
+                   AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 GROUP BY DATE(create_time)
+
+                 UNION ALL
+
+                 -- 点赞
+                 SELECT DATE(create_time) AS stat_date,
+                        0 AS view_count,
+                        COUNT(DISTINCT video_id) AS like_count,
+                        0 AS collect_count,
+                        0 AS comment_count,
+                        0 AS danmaku_count
+                 FROM t_video_like
+                 WHERE user_id = #{userId} AND is_delete = 0
+                   AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 GROUP BY DATE(create_time)
+
+                 UNION ALL
+
+                 -- 收藏
+                 SELECT DATE(create_time) AS stat_date,
+                        0 AS view_count,
+                        0 AS like_count,
+                        COUNT(DISTINCT video_id) AS collect_count,
+                        0 AS comment_count,
+                        0 AS danmaku_count
+                 FROM t_video_collection
+                 WHERE user_id = #{userId} AND is_delete = 0
+                   AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 GROUP BY DATE(create_time)
+
+                 UNION ALL
+
+                 -- 评论
+                 SELECT DATE(create_time) AS stat_date,
+                        0 AS view_count,
+                        0 AS like_count,
+                        0 AS collect_count,
+                        COUNT(DISTINCT id) AS comment_count,
+                        0 AS danmaku_count
+                 FROM t_video_comment
+                 WHERE user_id = #{userId} AND is_delete = 0
+                   AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 GROUP BY DATE(create_time)
+
+                 UNION ALL
+
+                 -- 弹幕
+                 SELECT DATE(create_time) AS stat_date,
+                        0 AS view_count,
+                        0 AS like_count,
+                        0 AS collect_count,
+                        0 AS comment_count,
+                        COUNT(DISTINCT id) AS danmaku_count
+                 FROM t_danmaku
+                 WHERE user_id = #{userId} AND is_delete = 0
+                   AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                 GROUP BY DATE(create_time)
+             ) AS combined_stats
+        GROUP BY stat_date
+        ORDER BY stat_date ASC
+    </select>
+
+
+
+    <resultMap id="VideoStatsResultMap" type="com.hsx.manyue.modules.video.model.dto.ownVideoStatsDTO">
+        <result column="video_id" property="videoId" jdbcType="BIGINT"/>
+        <result column="video_title" property="videoTitle" jdbcType="VARCHAR"/>
+        <result column="create_time" property="statDate" jdbcType="TIMESTAMP"/>
+        <result column="like_count" property="likeCount" jdbcType="INTEGER"/>
+        <result column="collection_count" property="collectionCount" jdbcType="INTEGER"/>
+        <result column="danmaku_count" property="danmakuCount" jdbcType="INTEGER"/>
+        <result column="view_count" property="viewCount" jdbcType="INTEGER"/>
+        <result column="comment_count" property="commentCount" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <select id="getVideoStatsLast7Days" resultMap="VideoStatsResultMap">
+        SELECT
+            v.id AS video_id,
+            v.title AS video_title,
+            v.create_time AS create_time,
+            COALESCE(like_stats.like_count, 0) AS like_count,
+            COALESCE(collection_stats.collection_count, 0) AS collection_count,
+            COALESCE(danmaku_stats.danmaku_count, 0) AS danmaku_count,
+            COALESCE(view_stats.view_count, 0) AS view_count,
+            COALESCE(comment_stats.comment_count, 0) AS comment_count
+        FROM
+            t_video v
+                LEFT JOIN (
+                SELECT
+                    video_id,
+                    COUNT(*) AS like_count
+                FROM
+                    t_video_like
+                WHERE
+                    user_id = #{userId}
+                  AND is_delete = 0
+                  AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY
+                    video_id
+            ) like_stats ON v.id = like_stats.video_id
+                LEFT JOIN (
+                SELECT
+                    video_id,
+                    COUNT(*) AS collection_count
+                FROM
+                    t_video_collection
+                WHERE
+                    user_id = #{userId}
+                  AND is_delete = 0
+                  AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY
+                    video_id
+            ) collection_stats ON v.id = collection_stats.video_id
+                LEFT JOIN (
+                SELECT
+                    video_id,
+                    COUNT(*) AS danmaku_count
+                FROM
+                    t_danmaku
+                WHERE
+                    user_id = #{userId}
+                  AND is_delete = 0
+                  AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY
+                    video_id
+            ) danmaku_stats ON v.id = danmaku_stats.video_id
+                LEFT JOIN (
+                SELECT
+                    video_id,
+                    COUNT(*) AS view_count
+                FROM
+                    t_video_history
+                WHERE
+                    user_id = #{userId}
+                  AND is_delete = 0
+                  AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY
+                    video_id
+            ) view_stats ON v.id = view_stats.video_id
+                LEFT JOIN (
+                SELECT
+                    video_id,
+                    COUNT(*) AS comment_count
+                FROM
+                    t_video_comment
+                WHERE
+                    user_id = #{userId}
+                  AND is_delete = 0
+                  AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY
+                    video_id
+            ) comment_stats ON v.id = comment_stats.video_id
+        WHERE
+            v.user_id = #{userId}
+          AND v.is_delete = 0
+          AND v.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ORDER BY
+            v.create_time DESC
+    </select>
+
+
+
+</mapper>

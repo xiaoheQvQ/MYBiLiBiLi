@@ -1,0 +1,27 @@
+﻿# IDE配置（IDEA）
+.idea/
+*.iml
+*.ipr
+*.iws
+*.yml
+# Maven编译产物
+target/
+build/
+<<<<<<< HEAD
+pom.xml
+*.sql
+.idea/
+*.iml
+.vscode/
+=======
+
+>>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
+# 敏感配置文件
+src/main/resources/application.yml
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
+pom.xml
+# 日志/临时文件
+logs/
+*.log
+temp/

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.feed.mapper.PostCommentMapper">
+    <select id="findRootCommentIds" resultType="long">
+        SELECT id FROM t_post_comment
+        WHERE post_id = #{postId} AND parent_id IS NULL AND is_delete = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="findAllCommentsByRootIds" resultType="com.hsx.manyue.modules.feed.model.entity.PostCommentEntity">
+        WITH RECURSIVE CommentTree AS (
+        -- Anchor member: select the root comments
+        SELECT *
+        FROM t_post_comment
+        WHERE id IN
+        <foreach item="item" collection="rootIds" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        AND is_delete = 0
+
+        UNION ALL
+
+        -- Recursive member: select child comments
+        SELECT c.*
+        FROM t_post_comment c
+        JOIN CommentTree ct ON c.parent_id = ct.id
+        WHERE c.is_delete = 0
+        )
+        SELECT *
+        FROM CommentTree;
+    </select>
+
+</mapper>

@@ -1,0 +1,178 @@
+package com.hsx.manyue.common.utils;
+
+import org.bytedeco.ffmpeg.global.avcodec;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
+import org.bytedeco.javacv.Frame;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * @description:
+ * @author：何世兴，微信：MrHe1006
+ * @date: 2025-04-24
+ * @author:2372781727@qq.com
+ */
+public class VideoToWavUtil {
+
+
+
+    /**
+     * 完整处理流程：从视频字节数组到SRT字幕
+     */
+    public static String processVideoToSrt(byte[] videoBytes) throws Exception {
+        // 1. 提取音频
+        String audioPath = extractAudioFromVideoBytes(videoBytes);
+
+        // 2. 语音转文字
+        String subtitleText = transcribeAudio(audioPath);
+
+        // 3. 生成SRT文件
+        return generateSrtFile(subtitleText, audioPath);
+    }
+
+
+    /**
+     * 从视频字节数组中提取音频
+     */
+    public static String extractAudioFromVideoBytes(byte[] videoBytes) throws Exception {
+        // 创建临时视频文件
+        File tempVideoFile = File.createTempFile("temp_video_", ".mp4");
+        tempVideoFile.deleteOnExit();
+
+        try (FileOutputStream fos = new FileOutputStream(tempVideoFile)) {
+            fos.write(videoBytes);
+        }
+
+        // 调用原有方法处理
+        return extractAudioFromVideo(tempVideoFile.getAbsolutePath());
+    }
+
+    /**
+     * 从视频中提取音频
+     */
+    private static String extractAudioFromVideo(String videoPath) throws Exception {
+        System.out.println("开始从视频中提取音频...");
+
+        String audioPath = videoPath.replace(".mp4", "_audio.wav");
+        FFmpegFrameGrabber grabber = null;
+        FFmpegFrameRecorder recorder = null;
+
+        try {
+            grabber = new FFmpegFrameGrabber(videoPath);
+            grabber.start();
+            grabber.setAudioStream(0); // 选择第一个音频流
+
+            recorder = new FFmpegFrameRecorder(audioPath, 1); // 单声道
+            recorder.setFormat("wav");
+            recorder.setSampleRate(16000);
+            recorder.setAudioCodec(avcodec.AV_CODEC_ID_PCM_S16LE);
+            recorder.setAudioOption("ar", "16000");
+            recorder.setAudioOption("ac", "1");
+            recorder.setAudioOption("sample_fmt", "s16");
+            recorder.setAudioQuality(0);
+            recorder.start();
+
+            Frame frame;
+            int frameCount = 0;
+            while ((frame = grabber.grab()) != null) {
+                if (frame.samples != null) {
+                    recorder.recordSamples(frame.sampleRate, frame.audioChannels, frame.samples);
+                    frameCount++;
+                    if (frameCount % 100 == 0) {
+                        System.out.println("已处理音频帧: " + frameCount);
+                    }
+                }
+            }
+
+            System.out.println("音频提取完成，共处理 " + frameCount + " 帧");
+
+        } finally {
+            if (recorder != null) {
+                try { recorder.stop(); } catch (Exception e) { e.printStackTrace(); }
+                try { recorder.release(); } catch (Exception e) { e.printStackTrace(); }
+            }
+            if (grabber != null) {
+                try { grabber.stop(); } catch (Exception e) { e.printStackTrace(); }
+                try { grabber.release(); } catch (Exception e) { e.printStackTrace(); }
+            }
+        }
+
+        return audioPath;
+    }
+
+    /**
+     * 语音转文字
+     */
+    private static String transcribeAudio(String audioPath) throws Exception {
+        System.out.println("开始语音转文字...");
+
+        String pythonScriptPath = "F:\\test\\fasterWhisper.py";
+        ProcessBuilder pb = new ProcessBuilder("python", pythonScriptPath, audioPath);
+        pb.redirectErrorStream(true);
+
+        Process process = pb.start();
+        StringBuilder output = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+                System.out.println("[Whisper] " + line); // 实时输出转写进度
+            }
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("语音转文字失败，退出码: " + exitCode);
+        }
+
+        System.out.println("语音转文字完成");
+        return output.toString();
+    }
+
+    /**
+     * 生成SRT字幕文件（确保UTF-8无BOM编码）
+     */
+    private static String generateSrtFile(String subtitleText, String audioPath) throws IOException {
+        System.out.println("开始生成SRT字幕文件...");
+
+        String srtPath = audioPath.replace("_audio.wav", ".srt");
+
+        // 使用FileOutputStream直接写入字节，避免BOM问题
+        try (OutputStream out = new FileOutputStream(srtPath);
+             BufferedWriter writer = new BufferedWriter(
+                     new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+
+            String[] blocks = subtitleText.split("\n\n");
+            for(int i = 0; i < blocks.length; i++) {
+                String block = blocks[i].trim();
+                if (block.isEmpty()) {
+                    continue;
+                }
+
+                String[] lines = block.split("\n");
+                if (lines.length >= 3) {
+                    // 序号
+                    writer.write(String.valueOf(i + 1));
+                    writer.newLine();
+                    // 时间轴
+                    writer.write(lines[1]);
+                    writer.newLine();
+                    // 内容（添加前缀）
+                    writer.write("=== " + lines[2]);
+                    writer.newLine();
+                    // 空行分隔
+                    writer.newLine();
+                }
+            }
+        }
+
+        System.out.println("SRT字幕文件已生成(UTF-8无BOM): " + srtPath);
+        return srtPath;
+    }
+
+
+}
