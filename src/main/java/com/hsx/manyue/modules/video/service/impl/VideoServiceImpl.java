@@ -1,9 +1,4 @@
 package com.hsx.manyue.modules.video.service.impl;
-<<<<<<< HEAD
-import com.hsx.manyue.modules.video.mapper.*;
-import com.hsx.manyue.modules.video.model.entity.*;
-import com.hsx.manyue.modules.video.model.vo.VideoSeriesVO;
-=======
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.hsx.manyue.modules.danmaku.mapper.DanmakuMapper;
 import com.hsx.manyue.modules.video.mapper.*;
@@ -11,7 +6,6 @@ import com.hsx.manyue.modules.video.model.entity.*;
 import com.hsx.manyue.modules.video.model.vo.VideoSeriesVO;
 import com.hsx.manyue.modules.video.service.*;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
@@ -19,10 +13,7 @@ import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
-<<<<<<< HEAD
-=======
 import cn.hutool.json.JSONObject;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import cn.hutool.json.JSONUtil;
 import com.aliyuncs.exceptions.ClientException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -31,20 +22,14 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-<<<<<<< HEAD
-=======
 import com.hsx.manyue.common.config.MQConfig;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import com.hsx.manyue.common.constant.RedisKeys;
 import com.hsx.manyue.common.enums.ReturnCodeEnums;
 import com.hsx.manyue.common.enums.VideoAreaEnum;
 import com.hsx.manyue.common.enums.VideoStatusEnum;
 import com.hsx.manyue.common.exception.ApiException;
 import com.hsx.manyue.common.model.entity.BaseEntity;
-<<<<<<< HEAD
-=======
 import com.hsx.manyue.common.utils.IpUtil;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import com.hsx.manyue.common.utils.JwtUtil;
 import com.hsx.manyue.common.utils.PageUtils;
 import com.hsx.manyue.common.utils.RedisUtil;
@@ -59,42 +44,27 @@ import com.hsx.manyue.modules.user.service.IUserSubscriptionService;
 import com.hsx.manyue.modules.video.model.dto.*;
 import com.hsx.manyue.modules.video.model.param.AdminVideoQueryParam;
 import com.hsx.manyue.modules.video.model.param.VideoQueryParam;
-<<<<<<< HEAD
 import com.hsx.manyue.modules.video.service.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-=======
-
+import com.hsx.manyue.modules.video.recommendation.VideoRecommendationStrategyFactory;
+import com.hsx.manyue.modules.video.search.VideoSearchStrategyFactory;
 import eu.bitwalker.useragentutils.UserAgent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.mahout.cf.taste.common.NoSuchItemException;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
-<<<<<<< HEAD
-=======
 import org.apache.mahout.cf.taste.impl.recommender.GenericItemBasedRecommender;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
 import org.apache.mahout.cf.taste.impl.similarity.UncenteredCosineSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
 import org.apache.mahout.cf.taste.model.PreferenceArray;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
 import org.apache.mahout.cf.taste.recommender.RecommendedItem;
-<<<<<<< HEAD
-import org.apache.mahout.cf.taste.similarity.UserSimilarity;
-import org.springframework.context.annotation.Lazy;
-=======
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
-
-import org.springframework.context.annotation.Lazy;
-
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,14 +72,6 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-<<<<<<< HEAD
-import java.io.*;
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-=======
-
 import java.io.*;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -117,29 +79,22 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
+
 import java.util.*;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-<<<<<<< HEAD
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-=======
-
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
 /**
  * 视频表 服务实现类
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Lazy
 public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> implements IVideoService {
 
     private final IVodService vodService;
@@ -150,7 +105,6 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
     @Resource
     private RedisUtil redisUtil;
 
-    @Lazy
     private final IVideoLikeService videoLikeService;
     private final IvideoSeriesService videoSeriesService;
     private final IVideoCollectionService videoCollectionService;
@@ -158,12 +112,14 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
     private final IUserSubscriptionService userSubscriptionService;
     private final WebSocketServer webSocketServer;
     private final IUserService userService;
-<<<<<<< HEAD
-    
     // 推荐策略工厂 - 使用策略模式重构推荐逻辑
-    private final com.hsx.manyue.modules.video.recommendation.VideoRecommendationStrategyFactory recommendationStrategyFactory;
-=======
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
+    private final VideoRecommendationStrategyFactory recommendationStrategyFactory;
+    
+    // 搜索策略工厂 - 使用策略模式重构搜索逻辑
+    private final VideoSearchStrategyFactory videoSearchStrategyFactory;
+
+    @Resource
+    private org.springframework.context.ApplicationContext applicationContext;
 
 
     private final ThreadPoolExecutor videoUploadExecutor = new ThreadPoolExecutor(3, 10,
@@ -172,10 +128,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
 
     private final VideoMapper videoMapper;
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
     @Override
     public List<VideoSeriesVO> getUserSeries(Long userId) {
         return videoMapper.selectUserSeries(userId);
@@ -250,6 +203,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
 
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "video", key = "#id", cacheManager = "caffeineCacheManager")
     public VideoDTO getVideoDetail(Long id) throws ClientException {
         VideoDTO videoDTO = baseMapper.getVideoDetail(id);
         Assert.notNull(videoDTO, "不存在的视频ID：{}", id);
@@ -680,8 +634,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
     }
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "recommendation", key = "#request.getHeader('User-Agent') + '_' + (T(com.hsx.manyue.common.utils.JwtUtil).LOGIN_USER_HANDLER.get() ?: 'guest')", cacheManager = "redisCacheManager")
     public List<VideoDTO> recommendVideoItemBased(HttpServletRequest request) throws TasteException {
-<<<<<<< HEAD
         // 使用策略模式重构后的推荐逻辑
         // 构建推荐上下文
         com.hsx.manyue.modules.video.recommendation.RecommendationContext context = 
@@ -694,55 +648,6 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
         
         // 策略工厂会自动选择合适的策略（用户登录 -> UserBasedStrategy，游客 -> ItemBasedStrategy）
         return recommendationStrategyFactory.recommend(context);
-=======
-
-        Long userId = JwtUtil.LOGIN_USER_HANDLER.get();
-        if (userId != null) {
-            return recommendVideosUserBased();
-        }else{
-
-            System.out.println("内容推荐");
-
-            //生成clientId
-            String agent = request.getHeader("User-Agent");
-            UserAgent userAgent = UserAgent.parseUserAgentString(agent);
-            String clientId = String.valueOf(userAgent.getId());
-            String ip = IpUtil.getIP(request);
-
-            //根据clientId和ip去t_video_history表查找最新的视频，返回videoId，如果没有，就返回所有用户三天内浏览记录最多的videoId，
-            Long videoId = getRecommendationSeed(clientId, ip);
-
-            try {
-                Long count = baseMapper.getPreferenceCountByVideoId(videoId);
-                if (count < 5) {
-                    log.info("videoId：{} 偏好视频数据太少", videoId);
-                    return getRandomVideo();
-                }
-
-                DataModel dataModel = getDataModel();
-                ItemSimilarity similarity = new UncenteredCosineSimilarity(dataModel);
-                GenericItemBasedRecommender recommender = new GenericItemBasedRecommender(dataModel, similarity);
-
-                List<RecommendedItem> recommendedItems;
-
-                log.info("向游客用户提供基于视频：{}的推荐", videoId);
-                 recommendedItems = recommender.mostSimilarItems(videoId, 50);
-
-
-                if (recommendedItems.isEmpty()) {
-                    log.info("videoId：{} 可推荐视频数据太少，随机推荐视频", videoId);
-                    return getRandomVideo();
-                }
-                log.info("推荐 videoId：{} 相关视频，执行 Mahout 推荐算法", videoId);
-                List<Long> videoIds = recommendedItems.stream().map(RecommendedItem::getItemID).collect(Collectors.toList());
-                return getRandomVideo(videoIds);
-            } catch (NoSuchItemException e) {
-                log.info("视频：{}相关数据稀少，随机推荐视频", videoId);
-                return getRandomVideo();
-            }
-        }
-
-
     }
 
     private Long getRecommendationSeed(String clientId, String ip) {
@@ -756,12 +661,11 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
             // 次之获取同IP用户最近热门视频
             ipHotVideos = baseMapper.selectHotVideosByIp(ip, 1);
         }
-        if (!ipHotVideos.isEmpty()) {
+        if (ipHotVideos != null && !ipHotVideos.isEmpty()) {
             return (Long) ipHotVideos.get(0).get("video_id");
         }
         // 最后返回全站热门视频
         return baseMapper.selectGlobalHotVideo();
->>>>>>> 01c11183b8bed47b9ab614855691e58ba43b30d3
     }
 
 
@@ -789,112 +693,49 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, VideoEntity> impl
 
     @Override
     public IPage<VideoDTO> queryVideosByEs(VideoQueryParam param) {
-        // 创建分页对象
-        Page<VideoEntity> page = new Page<>(param.getCurrent(), param.getSize());
-        String keyword = param.getKeyword();
-
-        // 根据type区分搜索类型
-        if ("user".equals(param.getType())) {
-            // 用户搜索：在用户昵称中查找
-            if (StrUtil.isNotBlank(keyword)) {
-                List<UserEntity> userList = userService.lambdaQuery()
-                        .like(UserEntity::getNick, "%" + keyword + "%")
-                        .list();
-
-                if (CollUtil.isEmpty(userList)) {
-                    return new Page<>(param.getCurrent(), param.getSize());
-                }
-
-                // 获取匹配用户的ID
-                List<Long> userIds = userList.stream()
-                        .map(UserEntity::getId)
-                        .collect(Collectors.toList());
-
-                // 查询这些用户的视频
-                page = this.lambdaQuery()
-                        .in(VideoEntity::getUserId, userIds)
-                        .eq(VideoEntity::getStatus, VideoStatusEnum.PUBLISHED)
-                        .orderByDesc(VideoEntity::getCreateTime)
-                        .page(page);
-            } else {
-                return new Page<>(param.getCurrent(), param.getSize());
-            }
-        } else {
-            // 视频搜索：在标题、描述中查找
-            LambdaQueryWrapper<VideoEntity> wrapper = Wrappers.lambdaQuery(VideoEntity.class)
-                    .eq(VideoEntity::getStatus, VideoStatusEnum.PUBLISHED);
-
-            if (StrUtil.isNotBlank(keyword)) {
-                // 拆分关键词进行更精确的搜索
-                String[] keywords = keyword.split(" ");
-                wrapper.and(w -> {
-                    for (String k : keywords) {
-                        w.or().like(VideoEntity::getTitle, "%" + k + "%")
-                                .or().like(VideoEntity::getDescription, "%" + k + "%");
-                    }
-                });
-            }
-
-            // 按区域筛选
-            VideoAreaEnum area = param.getArea();
-            if (area != null) {
-                wrapper.eq(VideoEntity::getArea, area);
-            }
-
-            // 添加随机排序（模拟ES的随机排序功能）
-            // 使用RAND()函数实现随机排序，或者使用固定种子提供一致性
-            String randomOrderSql = param.getSeed() == 0
-                    ? "RAND()"
-                    : "RAND(" + param.getSeed() + ")";
-            wrapper.last("ORDER BY " + randomOrderSql);
-
-            page = this.page(page, wrapper);
-        }
+        // 使用策略模式重构搜索逻辑，消除 if-else
+        IPage<VideoDTO> resultPage = videoSearchStrategyFactory.search(param);
 
         // 如果没有结果，返回空页
-        if (page.getRecords().isEmpty()) {
-            return new Page<>(param.getCurrent(), param.getSize());
+        if (CollUtil.isEmpty(resultPage.getRecords())) {
+            return resultPage;
         }
 
-        // 转换为DTO结果
-        Page<VideoDTO> resultPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
-        List<VideoDTO> records = page.getRecords().stream().map(entity -> {
-            VideoDTO dto = BeanUtil.toBean(entity, VideoDTO.class);
+        // 统一填充元数据 (用户信息、标签、点赞、高亮等)
+        String keyword = param.getKeyword();
+        resultPage.getRecords().forEach(dto -> fillVideoMetadata(dto, keyword));
 
-            // 填充用户信息
-            UserEntity user = userService.getById(entity.getUserId());
-            if (user != null) {
-                dto.setNick(user.getNick());
-                dto.setAvatar(user.getAvatar());
-            }
-
-            // 获取视频标签
-            List<TagDTO> tags = videoTagService.listByVideoId(entity.getId());
-            dto.setTags(tags);
-
-            // 获取弹幕数量
-            long danmakuCount = danmakuService.countByVideoId(entity.getId());
-            dto.setDanmakus(danmakuCount);
-
-            // 获取点赞数量
-            Long likeCount = videoLikeService.getLikeCount(entity.getId());
-            dto.setLike(likeCount);
-
-            // 手动添加高亮（如果需要）
-            if (StrUtil.isNotBlank(keyword) && StrUtil.isNotBlank(dto.getTitle())) {
-                String title = dto.getTitle();
-                int index = title.toLowerCase().indexOf(keyword.toLowerCase());
-                if (index >= 0) {
-                    String matched = title.substring(index, index + keyword.length());
-                    dto.setTitle(title.replace(matched, "<strong class=\"keyword\">" + matched + "</strong>"));
-                }
-            }
-
-            return dto;
-        }).collect(Collectors.toList());
-
-        resultPage.setRecords(records);
         return resultPage;
+    }
+
+    /**
+     * 填充视频元数据 (用户信息、标签、统计数据、高亮标题)
+     * 提取公共逻辑以遵循 DRY 原则，同时保持原有业务逻辑不变
+     */
+    private void fillVideoMetadata(VideoDTO dto, String keyword) {
+        // 1. 填充用户信息 (昵称、头像)
+        UserEntity user = userService.getById(dto.getUserId());
+        if (user != null) {
+            dto.setNick(user.getNick());
+            dto.setAvatar(user.getAvatar());
+        }
+
+        // 2. 填充标签
+        dto.setTags(videoTagService.listByVideoId(dto.getId()));
+
+        // 3. 填充统计数据 (弹幕、点赞)
+        dto.setDanmakus(danmakuService.countByVideoId(dto.getId()));
+        dto.setLike(videoLikeService.getLikeCount(dto.getId()));
+
+        // 4. 处理标题高亮 (保持原有正则逻辑)
+        if (StrUtil.isNotBlank(keyword) && StrUtil.isNotBlank(dto.getTitle())) {
+            String title = dto.getTitle();
+            int index = title.toLowerCase().indexOf(keyword.toLowerCase());
+            if (index >= 0) {
+                String matched = title.substring(index, index + keyword.length());
+                dto.setTitle(title.replace(matched, "<strong class=\"keyword\">" + matched + "</strong>"));
+            }
+        }
     }
 
     @Override

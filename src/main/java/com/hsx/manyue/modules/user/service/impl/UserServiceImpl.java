@@ -177,6 +177,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
 
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "userinfo", key = "#userId", cacheManager = "caffeineCacheManager")
     public UserDTO getInfoById(Long userId) {
         // 获取粉丝数量和关注数量
         Long followerCount = userSubscriptionService.countFollowers(userId);

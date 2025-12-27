@@ -1,68 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration scan="true" scanPeriod="60 seconds">
-    <!-- 彩色日志依赖的渲染类 -->
-    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
-    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
-    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
-    <!-- 彩色日志格式 -->
-    <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}" />
-    <!-- 控制台输出 -->
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+<configuration>
+    <!-- 使用Spring Boot默认转换器 -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 自定义控制台输出格式 -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} : %m%n%wEx"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>utf8</charset>
         </encoder>
     </appender>
 
-    <!-- 日志输出级别 -->
+    <!-- 全局日志级别 -->
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!-- MyBatis log configure -->
-    <logger name="com.apache.ibatis" level="INFO"/>
-    <logger name="org.mybatis.spring" level="DEBUG"/>
-    <logger name="java.sql.Connection" level="DEBUG"/>
-    <logger name="java.sql.Statement" level="DEBUG"/>
-    <logger name="java.sql.PreparedStatement" level="DEBUG"/>
+    <!-- ========== 业务日志 ========== -->
+    <logger name="com.hsx" level="DEBUG"/>
 
-    <!-- 减少部分debug日志 -->
-    <logger name="druid.sql" level="INFO"/>
-    <logger name="org.apache.shiro" level="INFO"/>
-    <logger name="org.mybatis.spring" level="INFO"/>
-    <logger name="org.springframework" level="INFO"/>
-    <logger name="org.springframework.context" level="WARN"/>
-    <logger name="org.springframework.beans" level="WARN"/>
+    <!-- ========== 第三方库日志控制 ========== -->
+    <!-- 严重警告降级 -->
+    <logger name="org.springframework.boot.devtools" level="ERROR"/>
+    <logger name="org.apache.fontbox" level="ERROR"/>
+    <logger name="org.apache.tomcat.util.http.parser.Cookie" level="ERROR"/>
+    <logger name="org.bytedeco" level="ERROR"/>
+    <logger name="com.zaxxer.hikari.HikariConfig" level="ERROR"/>
+
+    <!-- 详细日志降级 -->
+    <logger name="org.springframework.ai" level="WARN"/>
+    <logger name="com.datastax.oss" level="WARN"/>
+    <logger name="org.springframework.data.repository.config" level="WARN"/>
+    <logger name="org.hibernate.validator" level="WARN"/>
+
+    <!-- SQL日志（开发环境开启） -->
+    <logger name="java.sql" level="INFO"/>
+    <logger name="org.apache.ibatis" level="INFO"/>
     <logger name="com.baomidou.mybatisplus" level="INFO"/>
-    <logger name="org.apache.ibatis.io" level="INFO"/>
-    <logger name="org.apache.velocity" level="INFO"/>
-    <logger name="org.eclipse.jetty" level="INFO"/>
-    <logger name="io.undertow" level="INFO"/>
-    <logger name="org.xnio.nio" level="INFO"/>
-    <logger name="org.thymeleaf" level="INFO"/>
-    <logger name="springfox.documentation" level="INFO"/>
-    <logger name="org.hibernate.validator" level="INFO"/>
-    <logger name="com.netflix.loadbalancer" level="INFO"/>
-    <logger name="com.netflix.hystrix" level="INFO"/>
-    <logger name="com.netflix.zuul" level="INFO"/>
-    <logger name="de.codecentric" level="INFO"/>
-    <!-- cache INFO -->
-<!--    <logger name="net.sf.ehcache" level="INFO"/>-->
-    <logger name="org.springframework.cache" level="INFO"/>
-    <!-- cloud -->
-    <logger name="org.apache.http" level="INFO"/>
-    <logger name="com.netflix.discovery" level="INFO"/>
-    <logger name="com.netflix.eureka" level="INFO"/>
-
-    <!-- 减少nacos日志 -->
-    <logger name="com.alibaba.nacos" level="ERROR"/>
-
-    <!-- 业务日志 -->
-<!--    <Logger name="com.higoplat.higoplat.dao" level="DEBUG" />-->
-<!--    <Logger name="com.higoplat.higoplat.data.config.datasource" level="DEBUG" />-->
-    <Logger name="com.higoplat" level="DEBUG" />
-
-    <!--  mybatisplus  -->
-    <Logger name="com.baomidou.mybatisplus.core.mapper" level="DEBUG" />
-
 </configuration>
