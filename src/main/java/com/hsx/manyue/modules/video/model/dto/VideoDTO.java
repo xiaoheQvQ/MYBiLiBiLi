@@ -96,4 +96,7 @@ public class VideoDTO {
 
     @Schema(description = "关注数量")
     private Long followingCount;
+    
+    @Schema(description = "ES搜索评分（用于调试和排序）")
+    private Double esScore;
 }

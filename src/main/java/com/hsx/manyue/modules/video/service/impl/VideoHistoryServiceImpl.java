@@ -7,6 +7,7 @@ import com.hsx.manyue.modules.video.mapper.VideoHistoryMapper;
 import com.hsx.manyue.modules.video.model.dto.VideoDTO;
 import com.hsx.manyue.modules.video.model.entity.VideoHistoryEntity;
 import com.hsx.manyue.modules.video.service.IVideoHistoryService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,25 +16,29 @@ import java.util.List;
 
 /**
  * 视频观看历史记录 服务实现类
+ * 优化：使用Redis批量缓存+定时刷新，减少数据库操作
  */
 @Service
+@RequiredArgsConstructor
 public class VideoHistoryServiceImpl extends ServiceImpl<VideoHistoryMapper, VideoHistoryEntity> implements IVideoHistoryService {
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void updateHistory(Long userId, Long videoId, Double time) {
-        VideoHistoryEntity videoHistoryEntity = this.lambdaQuery()
-                .eq(VideoHistoryEntity::getUserId, userId)
-                .eq(VideoHistoryEntity::getVideoId, videoId)
-                .oneOpt()
-                .orElseGet(() -> new VideoHistoryEntity().setUserId(userId).setVideoId(videoId))
-                .setTime(time);
+    private final VideoHistoryBatchService batchService;
 
-        this.saveOrUpdate(videoHistoryEntity);
+    /**
+     * 更新观看历史（优化版）
+     * 使用Redis缓存，避免每秒都执行数据库操作
+     */
+    @Override
+    public void updateHistory(Long userId, Long videoId, Double time) {
+        // 异步更新到Redis，定时批量刷新到数据库
+        batchService.updateHistoryAsync(userId, videoId, time);
     }
 
+    /**
+     * 游客观看历史更新（优化版）
+     * 使用Redis缓存，避免频繁数据库操作
+     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void updateHistoryUnlogin(Long videoId, Double time, HttpServletRequest request) {
         //生成clientId
         String agent = request.getHeader("User-Agent");
@@ -41,18 +46,8 @@ public class VideoHistoryServiceImpl extends ServiceImpl<VideoHistoryMapper, Vid
         String clientId = String.valueOf(userAgent.getId());
         String ip = IpUtil.getIP(request);
 
-        // 查询或创建观看记录
-        VideoHistoryEntity videoHistoryEntity = this.lambdaQuery()
-                .eq(VideoHistoryEntity::getClientId, clientId)
-                .eq(VideoHistoryEntity::getVideoId, videoId)
-                .eq(VideoHistoryEntity::getIp, ip)
-                .oneOpt()
-                .orElseGet(() -> new VideoHistoryEntity()
-                        .setClientId(clientId)
-                        .setVideoId(videoId)
-                        .setIp(ip))
-                .setTime(time);
-        this.saveOrUpdate(videoHistoryEntity);
+        // 异步更新到Redis，定时批量刷新到数据库
+        batchService.updateHistoryUnloginAsync(videoId, time, clientId, ip);
     }
 
     @Override

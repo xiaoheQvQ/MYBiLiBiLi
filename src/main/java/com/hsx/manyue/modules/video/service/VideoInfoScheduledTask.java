@@ -75,14 +75,20 @@ public class VideoInfoScheduledTask {
 //    }
 
     public Set<Long> syncViewCounts() {
-        log.info("开始同步视屏观看次数");
+        log.info("开始同步视频观看次数");
         Map<Long, VideoEntity> entityMap = new HashMap<>();
 
-        // 使用RedisTemplate获取所有匹配的keys
-        Set<String> viewCounts = redisTemplate.keys(RedisKeys.VIEW_COUNTS + "*");
+        // 【优化】使用 Set 维护待处理的 videoId，避免 keys() 全量扫描
+        Set<Object> pendingVideoIds = redisTemplate.opsForSet().members(RedisKeys.VIEW_COUNTS_PENDING_KEYS);
+        if (pendingVideoIds == null || pendingVideoIds.isEmpty()) {
+            log.info("没有待同步的视频观看次数");
+            return new HashSet<>();
+        }
 
-        for (String key : viewCounts) {
-            Long videoId = Long.valueOf(key.split(":")[2]);
+        for (Object videoIdObj : pendingVideoIds) {
+            Long videoId = Long.valueOf(videoIdObj.toString());
+            String key = RedisKeys.VIEW_COUNTS + videoId;
+            
             VideoEntity videoEntity;
             if (!entityMap.containsKey(videoId)) {
                 videoEntity = new VideoEntity();
@@ -93,51 +99,85 @@ public class VideoInfoScheduledTask {
 
             // 使用redisUtil获取值并删除
             Object value = redisUtil.get(key);
-            redisUtil.del(key);
-            videoEntity.setCount(Long.valueOf(value.toString()));
-            entityMap.put(videoId, videoEntity);
+            if (value != null) {
+                redisUtil.del(key);
+                videoEntity.setCount(Long.valueOf(value.toString()));
+                entityMap.put(videoId, videoEntity);
+            }
+            
+            // 从待处理集合中移除
+            redisTemplate.opsForSet().remove(RedisKeys.VIEW_COUNTS_PENDING_KEYS, videoIdObj);
         }
-        videoService.updateBatchById(entityMap.values());
-        log.info("结束同步视屏观看次数");
+        
+        if (!entityMap.isEmpty()) {
+            videoService.updateBatchById(entityMap.values());
+        }
+        log.info("结束同步视频观看次数，共同步 {} 个视频", entityMap.size());
         return entityMap.values().stream().map(BaseEntity::getId).collect(Collectors.toSet());
     }
 
     public Set<Long> syncLikeCounts() {
         log.info("开始同步视频点赞数据");
 
-        // 使用RedisTemplate获取所有匹配的keys
-        Set<String> keys = redisTemplate.keys(RedisKeys.VIDEO_LIKE + "*");
+        // 【优化】使用 Set 维护待处理的 videoId，避免 keys() 全量扫描
+        Set<Object> pendingVideoIds = redisTemplate.opsForSet().members(RedisKeys.VIDEO_LIKE_PENDING_KEYS);
+        if (pendingVideoIds == null || pendingVideoIds.isEmpty()) {
+            log.info("没有待同步的视频点赞数据");
+            return new HashSet<>();
+        }
 
         Set<Long> videoIds = new HashSet<>();
-        for (String key : keys) {
+        for (Object videoIdObj : pendingVideoIds) {
+            Long videoId = Long.valueOf(videoIdObj.toString());
+            String key = RedisKeys.VIDEO_LIKE + videoId;
+            
             // 使用redisUtil获取集合成员
             Set<Object> userIdObjSet = redisUtil.sGet(key);
-            Set<String> userIdStrSet = userIdObjSet.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.toSet());
+            if (userIdObjSet != null && !userIdObjSet.isEmpty()) {
+                Set<String> userIdStrSet = userIdObjSet.stream()
+                        .map(Object::toString)
+                        .collect(Collectors.toSet());
 
-            Long videoId = Long.valueOf(key.split(":")[2]);
-            Set<Long> userIds = userIdStrSet.stream().map(Long::valueOf).collect(Collectors.toSet());
-            videoLikeService.saveOrUpdateLike(videoId, userIds);
-            videoIds.add(videoId);
+                Set<Long> userIds = userIdStrSet.stream().map(Long::valueOf).collect(Collectors.toSet());
+                videoLikeService.saveOrUpdateLike(videoId, userIds);
+                videoIds.add(videoId);
+            }
+            
+            // 从待处理集合中移除
+            redisTemplate.opsForSet().remove(RedisKeys.VIDEO_LIKE_PENDING_KEYS, videoIdObj);
         }
-        log.info("结束同步视频点赞数据");
+        log.info("结束同步视频点赞数据，共同步 {} 个视频", videoIds.size());
         return videoIds;
     }
 
     public void syncDanmakus() {
-        // 使用RedisTemplate获取所有匹配的keys
-        Set<String> keys = redisTemplate.keys(RedisKeys.DANMAKU_NEW.concat("*"));
+        // 【优化】使用 Set 维护待处理的 videoId，避免 keys() 全量扫描
+        Set<Object> pendingVideoIds = redisTemplate.opsForSet().members(RedisKeys.DANMAKU_PENDING_KEYS);
+        if (pendingVideoIds == null || pendingVideoIds.isEmpty()) {
+            log.info("没有待持久化的弹幕数据");
+            return;
+        }
 
-        log.info("定时持久化弹幕数据，共有{}个视频的弹幕需要持久化", keys.size());
+        log.info("定时持久化弹幕数据，共有{}个视频的弹幕需要持久化", pendingVideoIds.size());
 
-        for (String key : keys) {
+        for (Object videoIdObj : pendingVideoIds) {
+            String key = RedisKeys.DANMAKU_NEW + videoIdObj.toString();
+            
             // 使用redisUtil获取列表长度和内容
             long size = redisUtil.lGetListSize(key);
+            if (size == 0) {
+                // 从待处理集合中移除
+                redisTemplate.opsForSet().remove(RedisKeys.DANMAKU_PENDING_KEYS, videoIdObj);
+                continue;
+            }
+            
             List<Object> valuesObj = redisUtil.lGet(key, 0, size - 1);
 
             // 清空列表
             redisUtil.del(key);
+            
+            // 从待处理集合中移除
+            redisTemplate.opsForSet().remove(RedisKeys.DANMAKU_PENDING_KEYS, videoIdObj);
 
             List<String> values = valuesObj.stream()
                     .map(Object::toString)

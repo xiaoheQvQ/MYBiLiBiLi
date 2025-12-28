@@ -31,65 +31,30 @@ public class VideoCommentServiceImpl extends ServiceImpl<VideoCommentMapper, Com
 
 
     private final WebSocketServer webSocketServer;
+    private final com.hsx.manyue.modules.video.mq.CommentMQProducer commentMQProducer;
 
     @Override
     public R publishComment(CommentPublishDto commentPublishDto) {
-
-        CommentEntity comment = new CommentEntity();
-        comment.setUserId(commentPublishDto.getUserId());
-        comment.setVideoId(commentPublishDto.getVideoId());
-        comment.setContent(commentPublishDto.getContent());
-        comment.setParentId(0L); // 新评论的parent_id设为0
-
-
-
-        boolean success = save(comment);
-        if (success) {
-            String nick = baseMapper.getUserNickByUserId(commentPublishDto.getUserId());
-            String videoTitle = baseMapper.getVideoTitleByVideoId(String.valueOf(commentPublishDto.getVideoId()));
-            String videoPublishUserId = baseMapper.getvideoPublishUserIdByVideoId(commentPublishDto.getVideoId());
-
-            comment.setNick(nick);
-            comment.setVideoTitle(videoTitle);
-            comment.setVideoPublishUserId(videoPublishUserId);
-
-            webSocketServer.sendCommentLevel(comment);
-            return R.success("评论发布成功");
+        // 【优化】改为 MQ 异步处理，立即返回成功
+        try {
+            commentMQProducer.sendCommentPublishMessage(commentPublishDto);
+            return R.success("评论发布成功，正在处理中...");
+        } catch (Exception e) {
+            log.error("评论发布失败", e);
+            return R.failure("评论发布失败");
         }
-        return R.failure("评论发布失败");
     }
 
     @Override
     public R replyComment(CommentReplyDto commentReplyDto) {
-        System.out.println("回复内容："+commentReplyDto);
-
-
-        CommentEntity reply = new CommentEntity();
-        reply.setUserId(commentReplyDto.getUserId());
-        reply.setVideoId(commentReplyDto.getVideoId());
-        reply.setParentId(commentReplyDto.getParentId());
-        reply.setContent(commentReplyDto.getContent());
-
-        //非数据库字段
-        reply.setToCreateTime(commentReplyDto.getToCreateTime());
-        reply.setReplyCommentId(commentReplyDto.getReplyCommentId());
-
-        boolean success = save(reply);
-        if (success) {
-           // Long toUserId =  baseMapper.getUserIdByParentId(commentReplyDto.getReplyCommentId(),reply.getToCreateTime());
-           // reply.setToUserId(toUserId);
-            String nick = baseMapper.getUserNickByUserId(commentReplyDto.getReplyToUserId());
-            String videoPublishUserId = baseMapper.getvideoPublishUserIdByVideoId(commentReplyDto.getVideoId());
-            String videoTitle = baseMapper.getVideoTitleByVideoId(videoPublishUserId);
-            reply.setNick(nick);
-            reply.setVideoPublishUserId(videoPublishUserId);
-            reply.setVideoTitle(videoTitle);
-            reply.setToUserId(commentReplyDto.getReplyToUserId());
-            System.out.println("测试11111111111111111111111111111111");
-            webSocketServer.sendComment(reply);
-            return R.success("回复成功");
+        // 【优化】改为 MQ 异步处理，立即返回成功
+        try {
+            commentMQProducer.sendCommentReplyMessage(commentReplyDto);
+            return R.success("评论回复成功，正在处理中...");
+        } catch (Exception e) {
+            log.error("评论回复失败", e);
+            return R.failure("评论回复失败");
         }
-        return R.failure("回复失败");
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.hsx.manyue.modules.video.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.hsx.manyue.common.enums.VideoAreaEnum;
 import com.hsx.manyue.common.enums.VideoStatusEnum;
@@ -52,6 +53,12 @@ public class VideoEntity extends BaseEntity<VideoEntity> {
      * 观看次数
      */
     private Long count;
+
+    /**
+     * 点赞数量
+     */
+    @TableField(exist = false)
+    private Long like;
 
     private Float duration;
 

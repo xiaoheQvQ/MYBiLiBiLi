@@ -27,6 +27,16 @@ public class MQConfig {
     public static final String VIDEO_PROCESS_EXCHANGE = "video-process-exchange";
     public static final String VIDEO_PROCESS_QUEUE = "video-process-queue";
 
+    // 【新增】评论相关配置
+    public static final String COMMENT_EXCHANGE = "comment-exchange";
+    public static final String COMMENT_QUEUE = "comment-queue";
+    public static final String COMMENT_ROUTING_KEY = "comment.publish";
+
+    // 【新增】私信相关配置
+    public static final String PRIVATE_MESSAGE_EXCHANGE = "message-exchange";
+    public static final String PRIVATE_MESSAGE_QUEUE = "message-queue";
+    public static final String PRIVATE_MESSAGE_ROUTING_KEY = "message.send";
+
 
     @Bean
     public Queue danmakuQueue() {
@@ -60,5 +70,36 @@ public class MQConfig {
         return BindingBuilder.bind(videoProcessQueue()).to(videoProcessExchange());
     }
 
+    // 【新增】评论队列配置
+    @Bean
+    public Queue commentQueue() {
+        return new Queue(COMMENT_QUEUE, true); // 持久化队列
+    }
+
+    @Bean
+    public FanoutExchange commentExchange() {
+        return new FanoutExchange(COMMENT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Binding commentBinding() {
+        return BindingBuilder.bind(commentQueue()).to(commentExchange());
+    }
+
+    // 【新增】私信队列配置
+    @Bean
+    public Queue privateMessageQueue() {
+        return new Queue(PRIVATE_MESSAGE_QUEUE, true); // 持久化队列
+    }
+
+    @Bean
+    public FanoutExchange privateMessageExchange() {
+        return new FanoutExchange(PRIVATE_MESSAGE_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Binding privateMessageBinding() {
+        return BindingBuilder.bind(privateMessageQueue()).to(privateMessageExchange());
+    }
 
 }

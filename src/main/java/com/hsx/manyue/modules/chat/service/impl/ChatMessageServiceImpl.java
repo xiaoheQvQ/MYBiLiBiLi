@@ -8,6 +8,7 @@ import com.hsx.manyue.modules.chat.model.dto.ChatMessage;
 import com.hsx.manyue.modules.chat.service.IChatMessageService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,10 @@ import java.util.Date;
 import java.util.List;
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements IChatMessageService {
 
-
+    private final com.hsx.manyue.modules.chat.mq.ChatMessageMQProducer chatMessageMQProducer;
 
     @Override
     @Transactional
@@ -30,7 +32,15 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
         message.setCreateTime(new Date());
         message.setUpdateTime(new Date());
         
-        this.save(message);
+        // 【优化】改为 MQ 异步处理
+        try {
+            chatMessageMQProducer.sendPrivateMessage(message);
+            log.info("私信发送成功，正在处理中...");
+        } catch (Exception e) {
+            log.error("私信发送失败，降级为同步处理", e);
+            this.save(message);
+        }
+        
         return message;
     }
 
