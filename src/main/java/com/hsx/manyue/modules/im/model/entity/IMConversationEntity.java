@@ -68,7 +68,12 @@ public class IMConversationEntity {
      */
     private Integer isMute;
     
+    /**
+     * @我状态(0-无@, 1-有@我, 2-有@所有人)
+     */
+    private Integer atMeStatus;
+
     private Date createTime;
-    
+
     private Date updateTime;
 }

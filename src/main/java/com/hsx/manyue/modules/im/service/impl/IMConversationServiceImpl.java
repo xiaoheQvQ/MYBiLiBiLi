@@ -14,6 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 
+import com.hsx.manyue.modules.im.service.IIMGroupService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.annotation.Autowired;
+
 /**
  * IM会话服务实现
  */
@@ -22,21 +27,46 @@ import java.util.List;
 public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper, IMConversationEntity> 
         implements IIMConversationService {
 
+    @Autowired
+    @Lazy
+    private IIMGroupService groupService;
+
     @Override
     @Transactional
     public void updateConversation(IMMessageEntity message) {
-        // 更新发送者的会话 (只有单聊需要, 群聊不需要, 因为发送者已经在会话列表中了, 且发完后未读数也是0)
-        // 实际上发送者和接收者都需要更新会话记录
-        
+        updateConversation(message, null, null);
+    }
+
+    @Override
+    @Transactional
+    public void updateConversation(IMMessageEntity message, List<Long> atUserIds, Boolean atAll) {
         // 1. 更新接收者的会话
-        updateOrCreateConversation(message.getToUserId(), message.getSessionType(), 
-                message.getSessionType() == 1 ? message.getFromUserId() : message.getToGroupId(), 
-                message, true);
+        if (message.getSessionType() == 1) { // 单聊
+            updateOrCreateConversation(message.getToUserId(), 1, message.getFromUserId(), 
+                    message, true, 0);
+        } else { // 群聊
+            // 获取所有群成员
+            List<Long> memberIds = groupService.getGroupMemberIds(message.getToGroupId());
+            
+            for (Long memberId : memberIds) {
+                if (memberId.equals(message.getFromUserId())) continue; // 发送者跳过增加未读数，但可能需要更新最后消息
+                
+                int atMeStatus = 0;
+                if (Boolean.TRUE.equals(atAll)) {
+                    atMeStatus = 2; // @所有人
+                } else if (atUserIds != null && atUserIds.contains(memberId)) {
+                    atMeStatus = 1; // @我
+                }
+                
+                updateOrCreateConversation(memberId, 2, message.getToGroupId(), 
+                        message, true, atMeStatus);
+            }
+        }
         
-        // 2. 更新发送者的会话
+        // 2. 更新发送者的会话 (不增加未读数, 无@)
         updateOrCreateConversation(message.getFromUserId(), message.getSessionType(),
                 message.getSessionType() == 1 ? message.getToUserId() : message.getToGroupId(), 
-                message, false);
+                message, false, 0);
     }
 
     @Override
@@ -77,7 +107,7 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
     }
 
     private void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, 
-                                          IMMessageEntity message, boolean incrementUnread) {
+                                          IMMessageEntity message, boolean incrementUnread, int atMeStatus) {
         if (userId == null) return;
 
         LambdaQueryWrapper<IMConversationEntity> wrapper = new LambdaQueryWrapper<>();
@@ -95,6 +125,7 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
             conversation.setLastMsgSeq(message.getMsgSeq());
             conversation.setLastMsgContent(getContentDigest(message));
             conversation.setLastMsgTime(new Date(message.getMsgTime()));
+            conversation.setAtMeStatus(atMeStatus);
             conversation.setIsTop(0);
             conversation.setIsMute(0);
             conversation.setCreateTime(new Date());
@@ -106,6 +137,10 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
             conversation.setLastMsgTime(new Date(message.getMsgTime()));
             if (incrementUnread) {
                 conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+            }
+            // 只有当新的@状态更高时才覆盖（或者按需更新，这里简单处理：如果有@就更新）
+            if (atMeStatus > 0) {
+                conversation.setAtMeStatus(atMeStatus);
             }
             conversation.setUpdateTime(new Date());
             this.updateById(conversation);
@@ -126,7 +161,8 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
         wrapper.eq(IMConversationEntity::getUserId, userId)
                .eq(IMConversationEntity::getConversationType, conversationType)
                .eq(IMConversationEntity::getTargetId, targetId)
-               .set(IMConversationEntity::getUnreadCount, 0);
+               .set(IMConversationEntity::getUnreadCount, 0)
+               .set(IMConversationEntity::getAtMeStatus, 0);
         this.update(wrapper);
     }
 
@@ -141,10 +177,32 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
 
     private String getContentDigest(IMMessageEntity message) {
         if (message.getContentType() == null) return "";
+        
+        String content = message.getContent();
+        String textContent = "";
+        String fileName = null;
+        
+        // 尝试解析JSON内容
+        if (content != null && content.startsWith("{") && content.endsWith("}")) {
+            try {
+                cn.hutool.json.JSONObject json = cn.hutool.json.JSONUtil.parseObj(content);
+                if (json.containsKey("text")) {
+                    textContent = json.getStr("text");
+                }
+                if (json.containsKey("fileName")) {
+                    fileName = json.getStr("fileName");
+                }
+            } catch (Exception e) {
+                textContent = content;
+            }
+        } else {
+            textContent = content;
+        }
+        
         switch (message.getContentType()) {
             case 1: // 文本
-                String content = message.getContent();
-                return content.length() > 50 ? content.substring(0, 47) + "..." : content;
+                if (textContent == null || textContent.isEmpty()) return "";
+                return textContent.length() > 50 ? textContent.substring(0, 47) + "..." : textContent;
             case 2: // 图片
                 return "[图片]";
             case 3: // 语音
@@ -152,9 +210,32 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
             case 4: // 视频
                 return "[视频]";
             case 5: // 文件
+                if (fileName != null && !fileName.isEmpty()) {
+                    return "[文件] " + (fileName.length() > 20 ? fileName.substring(0, 17) + "..." : fileName);
+                }
                 return "[文件]";
             default:
                 return "[未知消息]";
         }
+    }
+
+    @Override
+    public void pinConversation(Long userId, Integer conversationType, Long targetId, Boolean isTop) {
+        LambdaUpdateWrapper<IMConversationEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(IMConversationEntity::getUserId, userId)
+               .eq(IMConversationEntity::getConversationType, conversationType)
+               .eq(IMConversationEntity::getTargetId, targetId)
+               .set(IMConversationEntity::getIsTop, isTop ? 1 : 0);
+        this.update(wrapper);
+    }
+
+    @Override
+    public void muteConversation(Long userId, Integer conversationType, Long targetId, Boolean isMute) {
+        LambdaUpdateWrapper<IMConversationEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(IMConversationEntity::getUserId, userId)
+               .eq(IMConversationEntity::getConversationType, conversationType)
+               .eq(IMConversationEntity::getTargetId, targetId)
+               .set(IMConversationEntity::getIsMute, isMute ? 1 : 0);
+        this.update(wrapper);
     }
 }

@@ -41,6 +41,7 @@ public class IMMessageServiceImpl extends ServiceImpl<IMMessageMapper, IMMessage
     private final IIMGroupService groupService;
     private final SessionManager sessionManager;
     private final RedisUtil redisUtil;
+    private final com.hsx.manyue.modules.user.service.IUserService userService;
     
     private static final String DEDUP_KEY_PREFIX = "im:dedup:";
     private static final int DEDUP_EXPIRE_SECONDS = 86400; // 24小时
@@ -107,10 +108,14 @@ public class IMMessageServiceImpl extends ServiceImpl<IMMessageMapper, IMMessage
         this.save(message);
         
         // 5. 更新会话列表
-        conversationService.updateConversation(message);
+        conversationService.updateConversation(message, dto.getAtUserIds(), dto.getAtAll());
         
         // 6. 推送给所有在线群成员
         IMMessage imMessage = convertToIMMessage(message);
+        // 设置@信息
+        imMessage.setAtUserIds(dto.getAtUserIds());
+        imMessage.setAtAll(dto.getAtAll());
+        
         List<Long> memberIds = groupService.getGroupMemberIds(dto.getToGroupId());
         sessionManager.pushGroupMessage(dto.getToGroupId(), imMessage, memberIds);
 
@@ -166,7 +171,11 @@ public class IMMessageServiceImpl extends ServiceImpl<IMMessageMapper, IMMessage
     public List<IMMessageEntity> pullHistory(Long userId, Long targetId, Integer sessionType, 
                                               Long startSeq, Integer limit) {
         // 从DB拉取历史消息
-        return baseMapper.queryHistory(userId, targetId, sessionType, startSeq, limit);
+        List<IMMessageEntity> entities = baseMapper.queryHistory(userId, targetId, sessionType, startSeq, limit);
+        
+        // 注意：这里返回的是Entity，前端需要自己解析JSON
+        // 如果要返回解析后的IMMessage，需要修改接口返回类型
+        return entities;
     }
 
     @Override
@@ -229,8 +238,41 @@ public class IMMessageServiceImpl extends ServiceImpl<IMMessageMapper, IMMessage
         entity.setFromUserId(dto.getFromUserId());
         entity.setToUserId(dto.getToUserId());
         entity.setToGroupId(dto.getToGroupId());
-        entity.setContent(dto.getContent());
         entity.setContentType(dto.getContentType());
+        
+        // 构建消息内容JSON
+        cn.hutool.json.JSONObject jsonContent = cn.hutool.json.JSONUtil.createObj();
+        
+        // 根据内容类型处理消息
+        if (dto.getContentType() == 1) {
+            // 文本消息
+            jsonContent.set("text", dto.getContent());
+        } else {
+            // 富媒体消息 (2-图片, 3-语音, 4-视频, 5-文件)
+            jsonContent.set("text", dto.getContent() != null ? dto.getContent() : "");
+            jsonContent.set("mediaUrl", dto.getMediaUrl());
+            
+            if (dto.getThumbnailUrl() != null) {
+                jsonContent.set("thumbnailUrl", dto.getThumbnailUrl());
+            }
+            if (dto.getDuration() != null) {
+                jsonContent.set("duration", dto.getDuration());
+            }
+            if (dto.getFileSize() != null) {
+                jsonContent.set("fileSize", dto.getFileSize());
+            }
+            if (dto.getFileName() != null) {
+                jsonContent.set("fileName", dto.getFileName());
+            }
+        }
+        
+        // 添加@信息（如果有）
+        if (sessionType == 2 && (Boolean.TRUE.equals(dto.getAtAll()) || (dto.getAtUserIds() != null && !dto.getAtUserIds().isEmpty()))) {
+            jsonContent.set("atUserIds", dto.getAtUserIds());
+            jsonContent.set("atAll", dto.getAtAll());
+        }
+        
+        entity.setContent(jsonContent.toString());
         entity.setClientMsgId(dto.getClientMsgId());
         entity.setMsgTime(System.currentTimeMillis());
         entity.setStatus(0); // 发送中
@@ -250,10 +292,69 @@ public class IMMessageServiceImpl extends ServiceImpl<IMMessageMapper, IMMessage
         message.setFromUserId(entity.getFromUserId());
         message.setToUserId(entity.getToUserId());
         message.setToGroupId(entity.getToGroupId());
-        message.setContent(entity.getContent());
-        message.setContentType(entity.getContentType());
         message.setMsgTime(entity.getMsgTime());
         message.setClientMsgId(entity.getClientMsgId());
+        message.setContentType(entity.getContentType());
+
+        // 解析JSON格式的内容
+        String content = entity.getContent();
+        if (content != null && content.trim().startsWith("{") && content.trim().endsWith("}")) {
+            try {
+                cn.hutool.json.JSONObject json = cn.hutool.json.JSONUtil.parseObj(content);
+                
+                // 提取文本内容
+                if (json.containsKey("text")) {
+                    message.setContent(json.getStr("text"));
+                } else if (json.containsKey("content")) {
+                    message.setContent(json.getStr("content"));
+                } else {
+                    message.setContent(""); // 富媒体消息可能没有文本内容
+                }
+                
+                // 提取@信息
+                if (json.containsKey("atUserIds")) {
+                    message.setAtUserIds(json.getBeanList("atUserIds", Long.class));
+                }
+                if (json.containsKey("atAll")) {
+                    message.setAtAll(json.getBool("atAll"));
+                }
+                
+                // 提取富媒体信息 - 这里的字段必须和数据库中存储的一致
+                if (json.containsKey("mediaUrl")) {
+                    message.setMediaUrl(json.getStr("mediaUrl"));
+                }
+                if (json.containsKey("thumbnailUrl")) {
+                    message.setThumbnailUrl(json.getStr("thumbnailUrl"));
+                }
+                if (json.containsKey("duration")) {
+                    message.setDuration(json.getInt("duration"));
+                }
+                if (json.containsKey("fileSize")) {
+                    message.setFileSize(json.getLong("fileSize"));
+                }
+                if (json.containsKey("fileName")) {
+                    message.setFileName(json.getStr("fileName"));
+                }
+                
+            } catch (Exception e) {
+                log.warn("解析消息内容JSON失败: msgSeq={}, content={}", entity.getMsgSeq(), content);
+                message.setContent(content);
+            }
+        } else {
+            message.setContent(content);
+        }
+
+        // 填充发送者信息 (昵称和头像)
+        try {
+            com.hsx.manyue.modules.user.model.entity.UserEntity user = userService.getById(entity.getFromUserId());
+            if (user != null) {
+                message.setFromUserName(user.getNick());
+                message.setFromUserAvatar(user.getAvatar());
+            }
+        } catch (Exception e) {
+            log.error("获取发送者信息失败: userId={}", entity.getFromUserId(), e);
+        }
+
         return message;
     }
 }

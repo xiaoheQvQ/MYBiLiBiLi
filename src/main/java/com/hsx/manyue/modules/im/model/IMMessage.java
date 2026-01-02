@@ -89,6 +89,41 @@ public class IMMessage {
      * 额外数据
      */
     private Object data;
+
+    /**
+     * @的用户ID列表
+     */
+    private java.util.List<Long> atUserIds;
+
+    /**
+     * 是否@所有人
+     */
+    private Boolean atAll;
+
+    /**
+     * 媒体文件URL(图片/语音/视频/文件)
+     */
+    private String mediaUrl;
+
+    /**
+     * 缩略图URL(图片/视频)
+     */
+    private String thumbnailUrl;
+
+    /**
+     * 时长(秒) - 用于语音/视频消息
+     */
+    private Integer duration;
+
+    /**
+     * 文件大小(字节)
+     */
+    private Long fileSize;
+
+    /**
+     * 文件名称(原始文件名)
+     */
+    private String fileName;
     
     /**
      * 解码方法 - 从JSON字节数组解码
@@ -125,6 +160,16 @@ public class IMMessage {
         }
     }
     
+    /**
+     * 发送者昵称
+     */
+    private String fromUserName;
+
+    /**
+     * 发送者头像
+     */
+    private String fromUserAvatar;
+
     /**
      * 创建ACK消息
      */

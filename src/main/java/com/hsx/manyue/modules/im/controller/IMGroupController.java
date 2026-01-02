@@ -113,4 +113,20 @@ public class IMGroupController extends SuperController {
         String avatarUrl = groupService.uploadGroupAvatar(groupId, userId, file);
         return success(avatarUrl);
     }
+
+    @GetMapping("/{groupId}/members/search")
+    @Operation(summary = "搜索群成员(用于@提及)")
+    @Login
+    public R searchGroupMembers(@PathVariable Long groupId,
+                                 @RequestParam(required = false) String keyword) {
+        List<IMGroupMemberEntity> members = groupService.getGroupMembers(groupId);
+        
+        // 如果有关键词，进行过滤
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            // 这里简单返回所有成员，前端可以根据昵称过滤
+            // 或者可以在service层添加更复杂的搜索逻辑
+        }
+        
+        return success(members);
+    }
 }

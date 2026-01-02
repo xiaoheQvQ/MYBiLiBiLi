@@ -17,6 +17,11 @@ public interface IIMConversationService extends IService<IMConversationEntity> {
     void updateConversation(IMMessageEntity message);
 
     /**
+     * 更新或创建会话 (支持@)
+     */
+    void updateConversation(IMMessageEntity message, java.util.List<Long> atUserIds, Boolean atAll);
+
+    /**
      * 更新或创建会话（指定内容）
      */
     void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, String lastMsgContent, Long lastMsgSeq);
@@ -35,4 +40,14 @@ public interface IIMConversationService extends IService<IMConversationEntity> {
      * 删除会话
      */
     void deleteConversation(Long userId, Integer conversationType, Long targetId);
+
+    /**
+     * 置顶/取消置顶会话
+     */
+    void pinConversation(Long userId, Integer conversationType, Long targetId, Boolean isTop);
+
+    /**
+     * 免打扰/取消免打扰
+     */
+    void muteConversation(Long userId, Integer conversationType, Long targetId, Boolean isMute);
 }

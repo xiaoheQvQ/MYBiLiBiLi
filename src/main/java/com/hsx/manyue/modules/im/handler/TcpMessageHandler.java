@@ -1,6 +1,5 @@
 package com.hsx.manyue.modules.im.handler;
 
-import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import com.hsx.manyue.common.utils.JwtUtil;
 import com.hsx.manyue.modules.im.model.IMMessage;

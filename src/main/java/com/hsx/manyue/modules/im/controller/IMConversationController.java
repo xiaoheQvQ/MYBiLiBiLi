@@ -52,4 +52,26 @@ public class IMConversationController extends SuperController {
         conversationService.deleteConversation(userId, conversationType, targetId);
         return success();
     }
+
+    @PostMapping("/pin")
+    @Operation(summary = "置顶/取消置顶会话")
+    @Login
+    public R pinConversation(@RequestParam Integer conversationType,
+                             @RequestParam Long targetId,
+                             @RequestParam Boolean isTop) {
+        Long userId = JwtUtil.LOGIN_USER_HANDLER.get();
+        conversationService.pinConversation(userId, conversationType, targetId, isTop);
+        return success();
+    }
+
+    @PostMapping("/mute")
+    @Operation(summary = "免打扰/取消免打扰")
+    @Login
+    public R muteConversation(@RequestParam Integer conversationType,
+                              @RequestParam Long targetId,
+                              @RequestParam Boolean isMute) {
+        Long userId = JwtUtil.LOGIN_USER_HANDLER.get();
+        conversationService.muteConversation(userId, conversationType, targetId, isMute);
+        return success();
+    }
 }

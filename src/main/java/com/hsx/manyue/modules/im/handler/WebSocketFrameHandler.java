@@ -1,6 +1,5 @@
 package com.hsx.manyue.modules.im.handler;
 
-import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import com.hsx.manyue.common.utils.JwtUtil;
 import com.hsx.manyue.modules.im.model.IMMessage;
@@ -132,6 +131,13 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
         dto.setContent(msg.getContent());
         dto.setContentType(msg.getContentType());
         
+        // 映射富媒体和提及信息
+        dto.setMediaUrl(msg.getMediaUrl());
+        dto.setThumbnailUrl(msg.getThumbnailUrl());
+        dto.setDuration(msg.getDuration());
+        dto.setFileSize(msg.getFileSize());
+        dto.setFileName(msg.getFileName());
+        
         messageService.sendSingleMessage(dto);
     }
 
@@ -142,6 +148,15 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
         dto.setToGroupId(msg.getToGroupId());
         dto.setContent(msg.getContent());
         dto.setContentType(msg.getContentType());
+        
+        // 映射富媒体和提及信息
+        dto.setMediaUrl(msg.getMediaUrl());
+        dto.setThumbnailUrl(msg.getThumbnailUrl());
+        dto.setDuration(msg.getDuration());
+        dto.setFileSize(msg.getFileSize());
+        dto.setFileName(msg.getFileName());
+        dto.setAtUserIds(msg.getAtUserIds());
+        dto.setAtAll(msg.getAtAll());
         
         messageService.sendGroupMessage(dto);
     }

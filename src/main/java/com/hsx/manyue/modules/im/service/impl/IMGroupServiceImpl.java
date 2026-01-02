@@ -1,7 +1,6 @@
 package com.hsx.manyue.modules.im.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hsx.manyue.modules.im.mapper.IMGroupMapper;
@@ -20,18 +19,30 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 
+import com.hsx.manyue.modules.im.service.IIMMessageService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+
 /**
  * IM群组服务实现
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity> 
         implements IIMGroupService {
 
-    private final IMGroupMemberMapper groupMemberMapper;
-    private final IIMConversationService conversationService;
-    private final SessionManager sessionManager;
+    @Autowired
+    private IMGroupMemberMapper groupMemberMapper;
+    @Autowired
+    private IIMConversationService conversationService;
+    @Autowired
+    private SessionManager sessionManager;
+    @Autowired
+    @Lazy
+    private com.hsx.manyue.modules.im.service.IIMMessageService messageService;
+    @Autowired
+    @Lazy
+    private com.hsx.manyue.modules.oss.service.IOssService ossService;
 
     @Override
     @Transactional
@@ -65,7 +76,7 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         conversationService.updateOrCreateConversation(ownerId, 2, group.getId(), "你创建了群组", null);
 
         // 发送群组通知
-        sendGroupNotify(group.getId(), ownerId, "CREATE");
+        sendGroupNotify(group.getId(), ownerId, "CREATE", "你创建了群组");
 
         log.info("创建群组成功: groupId={}, ownerId={}, groupName={}", group.getId(), ownerId, groupName);
         return group;
@@ -127,8 +138,8 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         // 创建会话
         conversationService.updateOrCreateConversation(userId, 2, groupId, "你加入了群组", null);
 
-        // 发送通知给被添加人
-        sendGroupNotify(groupId, userId, "JOIN");
+        // 发送通知给所有群成员
+        sendGroupNotify(groupId, userId, "JOIN", "用户 " + userId + " 加入了群组");
 
         log.info("添加群成员成功: groupId={}, userId={}, inviterId={}", groupId, userId, inviterId);
     }
@@ -251,8 +262,8 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         // 创建会话
         conversationService.updateOrCreateConversation(userId, 2, groupId, "你被邀请加入了群组", null);
 
-        // 发送通知给被邀请人
-        sendGroupNotify(groupId, userId, "INVITED");
+        // 发送通知给所有群成员
+        sendGroupNotify(groupId, userId, "INVITED", "用户 " + inviterId + " 邀请 " + userId + " 加入了群组");
 
         log.info("邀请群成员成功: groupId={}, userId={}, inviterId={}", groupId, userId, inviterId);
         
@@ -280,8 +291,6 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         
         // 使用OSS服务上传文件
         try {
-            com.hsx.manyue.modules.oss.service.IOssService ossService = 
-                SpringUtil.getBean(com.hsx.manyue.modules.oss.service.IOssService.class);
             String avatarUrl = ossService.uploadFile(file);
             
             // 更新群组头像
@@ -298,14 +307,35 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
     }
 
     /**
-     * 发送群组通知给指定用户
+     * 发送群组通知给所有活跃成员
      */
-    private void sendGroupNotify(Long groupId, Long userId, String action) {
+    private void sendGroupNotify(Long groupId, Long targetUserId, String action, String content) {
+        // 1. WebSocket实时推送通知
         IMMessage notify = new IMMessage();
         notify.setMsgType(IMMessage.TYPE_GROUP_NOTIFY);
         notify.setToGroupId(groupId);
         notify.setContent(action);
         notify.setMsgTime(System.currentTimeMillis());
-        sessionManager.pushMessage(userId, notify);
+        notify.setData(content); // 携带具体描述
+        
+        List<Long> memberIds = this.getGroupMemberIds(groupId);
+        for (Long memberId : memberIds) {
+            sessionManager.pushMessage(memberId, notify);
+        }
+
+        // 2. 将通知作为系统消息存入聊天记录
+        try {
+            com.hsx.manyue.modules.im.model.dto.IMMessageDTO dto = new com.hsx.manyue.modules.im.model.dto.IMMessageDTO();
+            dto.setFromUserId(0L); // 系统用户
+            dto.setToGroupId(groupId);
+            dto.setContent(content);
+            dto.setContentType(1); // 文本
+            dto.setClientMsgId(IdUtil.fastSimpleUUID());
+            
+            // 使用 messageService 持久化并推送
+            messageService.sendGroupMessage(dto); 
+        } catch (Exception e) {
+            log.error("保存系统消息失败", e);
+        }
     }
 }
