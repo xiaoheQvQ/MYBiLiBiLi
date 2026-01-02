@@ -608,8 +608,9 @@ public class WebSocketServer {
             if (receiverSession != null && receiverSession.isOpen()) {   //在线发送给接收者
                 System.out.println("发送给接收者："+forwardMessageStr);
                 receiverSession.getBasicRemote().sendText(forwardMessageStr);
-                //更新消息为已读状态
-                chatMessageService.updateMessagesStatus(fromUserId, toUserId, 1);
+                //更新消息为已读状态（如果接收方在聊天页面）
+                // 注意：这里不应该自动标记为已读，应该由前端主动调用已读接口
+                // chatMessageService.updateMessagesStatus(fromUserId, toUserId, 1);
             } else {                                                    //离线发送消息给接收者
                 // 存储到Redis离线消息
                 String key = RedisKeys.PRIVATE_MESSAGES + toUserId;

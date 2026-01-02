@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.im.mapper.IMGroupMemberMapper">
+
+    <!-- 查询群成员ID列表 -->
+    <select id="queryGroupMemberIds" resultType="java.lang.Long">
+        SELECT user_id FROM t_im_group_member
+        WHERE group_id = #{groupId}
+        AND is_delete = 0
+    </select>
+
+</mapper>

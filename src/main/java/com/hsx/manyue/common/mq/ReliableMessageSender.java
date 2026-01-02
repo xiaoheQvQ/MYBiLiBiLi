@@ -171,6 +171,9 @@ public class ReliableMessageSender {
         private String routingKey;
         private String message;
 
+        public MessageCompensationInfo() {
+        }
+
         public MessageCompensationInfo(String exchange, String routingKey, String message) {
             this.exchange = exchange;
             this.routingKey = routingKey;
@@ -181,31 +184,34 @@ public class ReliableMessageSender {
             return exchange;
         }
 
+        public void setExchange(String exchange) {
+            this.exchange = exchange;
+        }
+
         public String getRoutingKey() {
             return routingKey;
+        }
+
+        public void setRoutingKey(String routingKey) {
+            this.routingKey = routingKey;
         }
 
         public String getMessage() {
             return message;
         }
 
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
         public String toJson() {
-            return String.format("{\"exchange\":\"%s\",\"routingKey\":\"%s\",\"message\":\"%s\"}", 
-                    exchange, routingKey, message.replace("\"", "\\\""));
+            // 使用 JSONUtil 进行正确的JSON序列化，避免双重转义
+            return cn.hutool.json.JSONUtil.toJsonStr(this);
         }
 
         public static MessageCompensationInfo fromJson(String json) {
-            // 简单的JSON解析（生产环境建议使用Jackson或Gson）
-            String exchange = json.substring(json.indexOf("\"exchange\":\"") + 12);
-            exchange = exchange.substring(0, exchange.indexOf("\""));
-            
-            String routingKey = json.substring(json.indexOf("\"routingKey\":\"") + 14);
-            routingKey = routingKey.substring(0, routingKey.indexOf("\""));
-            
-            String message = json.substring(json.indexOf("\"message\":\"") + 11);
-            message = message.substring(0, message.lastIndexOf("\""));
-            
-            return new MessageCompensationInfo(exchange, routingKey, message);
+            // 使用 JSONUtil 进行正确的JSON反序列化
+            return cn.hutool.json.JSONUtil.toBean(json, MessageCompensationInfo.class);
         }
 
         @Override

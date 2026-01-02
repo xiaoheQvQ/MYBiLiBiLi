@@ -6,7 +6,10 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -100,6 +103,30 @@ public class MQConfig {
     @Bean
     public Binding privateMessageBinding() {
         return BindingBuilder.bind(privateMessageQueue()).to(privateMessageExchange());
+    }
+
+    /**
+     * 配置 RabbitMQ 监听器容器工厂
+     * 修复批量消息接收时的解析错误
+     */
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        
+        // 设置批量消费
+        factory.setBatchListener(true);
+        factory.setBatchSize(50); // 每批最多50条消息
+        factory.setConsumerBatchEnabled(true);
+        
+        // 设置并发消费者数量
+        factory.setConcurrentConsumers(3);
+        factory.setMaxConcurrentConsumers(10);
+        
+        // 设置预取数量
+        factory.setPrefetchCount(50);
+        
+        return factory;
     }
 
 }

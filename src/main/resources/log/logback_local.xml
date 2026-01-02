@@ -21,7 +21,7 @@
     </root>
 
     <!-- ========== 业务日志 ========== -->
-    <logger name="com.hsx" level="DEBUG"/>
+    <logger name="com.hsx" level="INFO"/>
 
     <!-- ========== 第三方库日志控制 ========== -->
     <!-- 严重警告降级 -->
@@ -38,7 +38,7 @@
     <logger name="org.hibernate.validator" level="WARN"/>
 
     <!-- SQL日志（开发环境开启） -->
-    <logger name="java.sql" level="INFO"/>
-    <logger name="org.apache.ibatis" level="INFO"/>
-    <logger name="com.baomidou.mybatisplus" level="INFO"/>
+    <logger name="java.sql" level="WARN"/>
+    <logger name="org.apache.ibatis" level="WARN"/>
+    <logger name="com.baomidou.mybatisplus" level="WARN"/>
 </configuration>
