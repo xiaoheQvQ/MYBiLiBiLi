@@ -39,6 +39,43 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
                 message, false);
     }
 
+    @Override
+    @Transactional
+    public void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, 
+                                          String lastMsgContent, Long lastMsgSeq) {
+        if (userId == null) return;
+
+        LambdaQueryWrapper<IMConversationEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(IMConversationEntity::getUserId, userId)
+               .eq(IMConversationEntity::getConversationType, conversationType)
+               .eq(IMConversationEntity::getTargetId, targetId);
+        
+        IMConversationEntity conversation = this.getOne(wrapper);
+        if (conversation == null) {
+            conversation = new IMConversationEntity();
+            conversation.setUserId(userId);
+            conversation.setConversationType(conversationType);
+            conversation.setTargetId(targetId);
+            conversation.setUnreadCount(0);
+            conversation.setLastMsgSeq(lastMsgSeq);
+            conversation.setLastMsgContent(lastMsgContent);
+            conversation.setLastMsgTime(new Date());
+            conversation.setIsTop(0);
+            conversation.setIsMute(0);
+            conversation.setCreateTime(new Date());
+            conversation.setUpdateTime(new Date());
+            this.save(conversation);
+        } else {
+            if (lastMsgSeq != null) {
+                conversation.setLastMsgSeq(lastMsgSeq);
+            }
+            conversation.setLastMsgContent(lastMsgContent);
+            conversation.setLastMsgTime(new Date());
+            conversation.setUpdateTime(new Date());
+            this.updateById(conversation);
+        }
+    }
+
     private void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, 
                                           IMMessageEntity message, boolean incrementUnread) {
         if (userId == null) return;

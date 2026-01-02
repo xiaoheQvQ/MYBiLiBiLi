@@ -6,8 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hsx.manyue.modules.im.mapper.IMGroupMapper;
 import com.hsx.manyue.modules.im.mapper.IMGroupMemberMapper;
+import com.hsx.manyue.modules.im.model.IMMessage;
 import com.hsx.manyue.modules.im.model.entity.IMGroupEntity;
 import com.hsx.manyue.modules.im.model.entity.IMGroupMemberEntity;
+import com.hsx.manyue.modules.im.server.SessionManager;
+import com.hsx.manyue.modules.im.service.IIMConversationService;
 import com.hsx.manyue.modules.im.service.IIMGroupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,8 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         implements IIMGroupService {
 
     private final IMGroupMemberMapper groupMemberMapper;
+    private final IIMConversationService conversationService;
+    private final SessionManager sessionManager;
 
     @Override
     @Transactional
@@ -56,6 +61,12 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         member.setIsDelete(0);
         groupMemberMapper.insert(member);
         
+        // 创建会话
+        conversationService.updateOrCreateConversation(ownerId, 2, group.getId(), "你创建了群组", null);
+
+        // 发送群组通知
+        sendGroupNotify(group.getId(), ownerId, "CREATE");
+
         log.info("创建群组成功: groupId={}, ownerId={}, groupName={}", group.getId(), ownerId, groupName);
         return group;
     }
@@ -113,6 +124,12 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         group.setUpdateTime(new Date());
         this.updateById(group);
         
+        // 创建会话
+        conversationService.updateOrCreateConversation(userId, 2, groupId, "你加入了群组", null);
+
+        // 发送通知给被添加人
+        sendGroupNotify(groupId, userId, "JOIN");
+
         log.info("添加群成员成功: groupId={}, userId={}, inviterId={}", groupId, userId, inviterId);
     }
 
@@ -177,10 +194,7 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
 
     @Override
     public List<IMGroupMemberEntity> getGroupMembers(Long groupId) {
-        LambdaQueryWrapper<IMGroupMemberEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(IMGroupMemberEntity::getGroupId, groupId)
-               .eq(IMGroupMemberEntity::getIsDelete, 0);
-        return groupMemberMapper.selectList(wrapper);
+        return groupMemberMapper.queryGroupMembersWithUserInfo(groupId);
     }
 
     @Override
@@ -234,6 +248,12 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
         group.setUpdateTime(new Date());
         this.updateById(group);
         
+        // 创建会话
+        conversationService.updateOrCreateConversation(userId, 2, groupId, "你被邀请加入了群组", null);
+
+        // 发送通知给被邀请人
+        sendGroupNotify(groupId, userId, "INVITED");
+
         log.info("邀请群成员成功: groupId={}, userId={}, inviterId={}", groupId, userId, inviterId);
         
         // TODO: 发送群组邀请通知到被邀请人（通过WebSocket）
@@ -275,5 +295,17 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
             log.error("上传群组头像失败", e);
             throw new RuntimeException("上传群组头像失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 发送群组通知给指定用户
+     */
+    private void sendGroupNotify(Long groupId, Long userId, String action) {
+        IMMessage notify = new IMMessage();
+        notify.setMsgType(IMMessage.TYPE_GROUP_NOTIFY);
+        notify.setToGroupId(groupId);
+        notify.setContent(action);
+        notify.setMsgTime(System.currentTimeMillis());
+        sessionManager.pushMessage(userId, notify);
     }
 }

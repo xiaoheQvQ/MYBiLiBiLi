@@ -15,6 +15,11 @@ public interface IIMConversationService extends IService<IMConversationEntity> {
      * 更新或创建会话
      */
     void updateConversation(IMMessageEntity message);
+
+    /**
+     * 更新或创建会话（指定内容）
+     */
+    void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, String lastMsgContent, Long lastMsgSeq);
     
     /**
      * 获取用户会话列表

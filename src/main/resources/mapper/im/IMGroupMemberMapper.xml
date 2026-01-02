@@ -9,4 +9,13 @@
         AND is_delete = 0
     </select>
 
+    <!-- 查询群成员信息（带用户信息） -->
+    <select id="queryGroupMembersWithUserInfo" resultType="com.hsx.manyue.modules.im.model.entity.IMGroupMemberEntity">
+        SELECT m.*, u.nick, u.avatar
+        FROM t_im_group_member m
+        LEFT JOIN t_user u ON m.user_id = u.id
+        WHERE m.group_id = #{groupId}
+        AND m.is_delete = 0
+    </select>
+
 </mapper>

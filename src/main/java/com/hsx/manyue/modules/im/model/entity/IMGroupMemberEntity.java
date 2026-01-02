@@ -2,6 +2,7 @@ package com.hsx.manyue.modules.im.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -53,4 +54,16 @@ public class IMGroupMemberEntity {
     private Date muteEndTime;
     
     private Integer isDelete;
+
+    /**
+     * 用户昵称
+     */
+    @TableField(exist = false)
+    private String nick;
+
+    /**
+     * 用户头像
+     */
+    @TableField(exist = false)
+    private String avatar;
 }

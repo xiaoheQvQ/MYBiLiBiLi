@@ -17,4 +17,9 @@ public interface IMGroupMemberMapper extends BaseMapper<IMGroupMemberEntity> {
      * 查询群成员ID列表
      */
     List<Long> queryGroupMemberIds(@Param("groupId") Long groupId);
+
+    /**
+     * 查询群成员信息（带用户信息）
+     */
+    List<IMGroupMemberEntity> queryGroupMembersWithUserInfo(@Param("groupId") Long groupId);
 }

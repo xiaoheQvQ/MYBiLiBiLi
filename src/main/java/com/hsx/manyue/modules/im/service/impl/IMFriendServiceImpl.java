@@ -8,6 +8,7 @@ import com.hsx.manyue.modules.im.model.IMMessage;
 import com.hsx.manyue.modules.im.model.entity.IMFriendApplyEntity;
 import com.hsx.manyue.modules.im.model.entity.IMFriendEntity;
 import com.hsx.manyue.modules.im.server.SessionManager;
+import com.hsx.manyue.modules.im.service.IIMConversationService;
 import com.hsx.manyue.modules.im.service.IIMFriendService;
 import com.hsx.manyue.modules.user.model.entity.UserEntity;
 import com.hsx.manyue.modules.user.service.IUserService;
@@ -31,6 +32,7 @@ public class IMFriendServiceImpl extends ServiceImpl<IMFriendMapper, IMFriendEnt
     private final IMFriendApplyMapper friendApplyMapper;
     private final SessionManager sessionManager;
     private final IUserService userService;
+    private final IIMConversationService conversationService;
 
     @Override
     @Transactional
@@ -89,6 +91,10 @@ public class IMFriendServiceImpl extends ServiceImpl<IMFriendMapper, IMFriendEnt
         addFriendRelation(apply.getFromUserId(), apply.getToUserId());
         addFriendRelation(apply.getToUserId(), apply.getFromUserId());
         
+        // 创建会话
+        conversationService.updateOrCreateConversation(apply.getFromUserId(), 1, apply.getToUserId(), "你们已经是好友了，开始聊天吧", null);
+        conversationService.updateOrCreateConversation(apply.getToUserId(), 1, apply.getFromUserId(), "你们已经是好友了，开始聊天吧", null);
+
         // 推送通知给申请人(A)
         IMMessage notifyMsg = new IMMessage();
         notifyMsg.setMsgType(IMMessage.TYPE_FRIEND_APPLY);
