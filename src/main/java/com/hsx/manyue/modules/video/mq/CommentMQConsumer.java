@@ -124,7 +124,9 @@ public class CommentMQConsumer {
             comment.setVideoTitle(videoTitle);
             comment.setVideoPublishUserId(videoPublishUserId);
 
-            if (comment.getParentId() == 0) {
+            // 添加null检查，防止NullPointerException
+            Long parentId = comment.getParentId();
+            if (parentId == null || parentId == 0) {
                 webSocketServer.sendCommentLevel(comment);
             } else {
                 webSocketServer.sendComment(comment);

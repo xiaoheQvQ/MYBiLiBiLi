@@ -338,4 +338,43 @@ public class IMGroupServiceImpl extends ServiceImpl<IMGroupMapper, IMGroupEntity
             log.error("保存系统消息失败", e);
         }
     }
+    
+    @Override
+    @Transactional
+    public void exitGroup(Long groupId, Long userId) {
+        // 检查群组是否存在
+        IMGroupEntity group = this.getById(groupId);
+        if (group == null || group.getStatus() == 0) {
+            throw new RuntimeException("群组不存在或已解散");
+        }
+        
+        // 检查是否是群主（群主不能退出，只能解散）
+        if (group.getOwnerId().equals(userId)) {
+            throw new RuntimeException("群主不能退出群组，请解散群组");
+        }
+        
+        // 检查是否是群成员
+        LambdaQueryWrapper<IMGroupMemberEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(IMGroupMemberEntity::getGroupId, groupId)
+               .eq(IMGroupMemberEntity::getUserId, userId);
+        IMGroupMemberEntity member = groupMemberMapper.selectOne(wrapper);
+        
+        if (member == null) {
+            throw new RuntimeException("您不是群成员");
+        }
+        
+        // 删除成员记录
+        groupMemberMapper.delete(wrapper);
+        
+        // 更新群成员数
+        group.setMemberCount(group.getMemberCount() - 1);
+        group.setUpdateTime(new Date());
+        this.updateById(group);
+        
+        // 发送通知给其他群成员
+        sendGroupNotify(groupId, userId, "EXIT", "用户 " + userId + " 退出了群组");
+        
+        log.info("用户退出群组成功: groupId={}, userId={}", groupId, userId);
+    }
 }
+

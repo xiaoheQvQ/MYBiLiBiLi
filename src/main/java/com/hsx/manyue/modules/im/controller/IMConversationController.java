@@ -5,6 +5,7 @@ import com.hsx.manyue.common.controller.SuperController;
 import com.hsx.manyue.common.dto.R;
 import com.hsx.manyue.common.utils.JwtUtil;
 import com.hsx.manyue.modules.im.model.entity.IMConversationEntity;
+import com.hsx.manyue.modules.im.model.vo.IMConversationVO;
 import com.hsx.manyue.modules.im.service.IIMConversationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +30,7 @@ public class IMConversationController extends SuperController {
     @Login
     public R getConversationList() {
         Long userId = JwtUtil.LOGIN_USER_HANDLER.get();
-        List<IMConversationEntity> list = conversationService.getConversationList(userId);
+        List<IMConversationVO> list = conversationService.getConversationList(userId);
         return success(list);
     }
 

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hsx.manyue.modules.im.mapper.IMConversationMapper;
 import com.hsx.manyue.modules.im.model.entity.IMConversationEntity;
 import com.hsx.manyue.modules.im.model.entity.IMMessageEntity;
+import com.hsx.manyue.modules.im.model.vo.IMConversationVO;
 import com.hsx.manyue.modules.im.service.IIMConversationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -148,11 +149,8 @@ public class IMConversationServiceImpl extends ServiceImpl<IMConversationMapper,
     }
 
     @Override
-    public List<IMConversationEntity> getConversationList(Long userId) {
-        LambdaQueryWrapper<IMConversationEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(IMConversationEntity::getUserId, userId)
-               .orderByDesc(IMConversationEntity::getLastMsgTime);
-        return this.list(wrapper);
+    public List<IMConversationVO> getConversationList(Long userId) {
+        return baseMapper.queryConversationListWithInfo(userId);
     }
 
     @Override

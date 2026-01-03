@@ -3,6 +3,7 @@ package com.hsx.manyue.modules.im.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hsx.manyue.modules.im.model.entity.IMConversationEntity;
 import com.hsx.manyue.modules.im.model.entity.IMMessageEntity;
+import com.hsx.manyue.modules.im.model.vo.IMConversationVO;
 
 import java.util.List;
 
@@ -27,9 +28,9 @@ public interface IIMConversationService extends IService<IMConversationEntity> {
     void updateOrCreateConversation(Long userId, Integer conversationType, Long targetId, String lastMsgContent, Long lastMsgSeq);
     
     /**
-     * 获取用户会话列表
+     * 获取用户会话列表（包含目标用户/群组信息）
      */
-    List<IMConversationEntity> getConversationList(Long userId);
+    List<IMConversationVO> getConversationList(Long userId);
     
     /**
      * 清除未读数

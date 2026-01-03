@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hsx.manyue.modules.im.mapper.IMConversationMapper">
+    
+    <!-- 查询用户的会话列表（包含目标用户/群组信息） -->
+    <select id="queryConversationListWithInfo" resultType="com.hsx.manyue.modules.im.model.vo.IMConversationVO">
+        SELECT 
+            c.id,
+            c.user_id AS userId,
+            c.conversation_type AS conversationType,
+            c.target_id AS targetId,
+            c.last_msg_seq AS lastMsgSeq,
+            c.last_msg_content AS lastMsgContent,
+            c.last_msg_time AS lastMsgTime,
+            c.unread_count AS unreadCount,
+            c.is_top AS isTop,
+            c.is_mute AS isMute,
+            c.at_me_status AS atMeStatus,
+            c.create_time AS createTime,
+            c.update_time AS updateTime,
+            CASE 
+                WHEN c.conversation_type = 1 THEN u.nick
+                WHEN c.conversation_type = 2 THEN g.group_name
+            END AS targetName,
+            CASE 
+                WHEN c.conversation_type = 1 THEN u.avatar
+                WHEN c.conversation_type = 2 THEN g.group_avatar
+            END AS targetAvatar,
+            g.group_name AS groupName,
+            g.group_avatar AS groupAvatar
+        FROM t_im_conversation c
+        LEFT JOIN t_user u ON c.conversation_type = 1 AND c.target_id = u.id
+        LEFT JOIN t_im_group g ON c.conversation_type = 2 AND c.target_id = g.id
+        WHERE c.user_id = #{userId}
+        ORDER BY c.last_msg_time DESC
+    </select>
+    
+</mapper>

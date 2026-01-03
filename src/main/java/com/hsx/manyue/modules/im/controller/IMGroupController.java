@@ -113,6 +113,15 @@ public class IMGroupController extends SuperController {
         String avatarUrl = groupService.uploadGroupAvatar(groupId, userId, file);
         return success(avatarUrl);
     }
+    
+    @PostMapping("/exit")
+    @Operation(summary = "退出群组")
+    @Login
+    public R exitGroup(@RequestParam Long groupId) {
+        Long userId = JwtUtil.LOGIN_USER_HANDLER.get();
+        groupService.exitGroup(groupId, userId);
+        return success();
+    }
 
     @GetMapping("/{groupId}/members/search")
     @Operation(summary = "搜索群成员(用于@提及)")

@@ -58,4 +58,9 @@ public interface IIMGroupService {
      * 上传群组头像
      */
     String uploadGroupAvatar(Long groupId, Long operatorId, org.springframework.web.multipart.MultipartFile file);
+    
+    /**
+     * 退出群组（用户主动退出）
+     */
+    void exitGroup(Long groupId, Long userId);
 }
